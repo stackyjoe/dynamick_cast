@@ -1,7 +1,7 @@
 #include <exception>
 #include <stdexcept>
 
-#include "constexpr_string_functions.hpp"
+#include "string_functions.hpp"
 #include "episode.hpp"
 
 episode::episode(boost::property_tree::ptree::iterator tree_node)
@@ -74,9 +74,7 @@ const std::string &episode::url() const {
 }
 
 std::optional<std::unique_lock<std::mutex>> episode::get_download_rights() {
-    std::unique_lock download_rights(*download_lock, std::try_to_lock);
-
-    if(download_rights.owns_lock())
+    if(std::unique_lock download_rights(*download_lock, std::try_to_lock); download_rights.owns_lock())
         return std::move(download_rights);
 
     return {};
@@ -87,12 +85,8 @@ bool episode::has_title(const QString &text) const {
 }
 
 void episode::populate(int i, QStandardItemModel *model) const {
-    QModelIndex index = model->index(i,0);
-
-    if(not index.isValid())
-        return;
-    if(not model->setData(index, title, Qt::DisplayRole))
-        std::cout << "Failed to add " << title.toStdString() << " to episodeView." << std::endl;
+    if( QModelIndex index = model->index(i,0); index.isValid() and not model->setData(index, title, Qt::DisplayRole))
+            std::cout << "Failed to add " << title.toStdString() << " to episodeView." << std::endl;
 }
 
 void episode::serialize_into(std::ofstream &file) {
@@ -105,7 +99,7 @@ void episode::serialize_into(std::ofstream &file) {
     file << "\t\"link\": \"" << page_url << "\",\n";
     file << "\t\"pubDate\": \"" << publication_date.toStdString() << "\",\n";
     file << "\t\"subtitle\": \"" << subtitle.toStdString() << "\",\n";
-    file << "\t\"title\": \"" << title.toStdString() << "\"\n";
+    file << "\t\"title\": \"" << sanitize(title.toStdString()) << "\"\n";
     file << "}";
     // Outputting ",\n" is responsibility of podcast, sadly.
 }

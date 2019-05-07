@@ -1,5 +1,7 @@
-#ifndef CONSTEXPR_STRING_FUNCTIONS_HPP
-#define CONSTEXPR_STRING_FUNCTIONS_HPP
+#ifndef STRING_FUNCTIONS_HPP
+#define STRING_FUNCTIONS_HPP
+
+#include <string>
 
 // This is a quick and dirty one someone wrote on stackoverflow
 //          https://stackoverflow.com/a/46711735
@@ -18,4 +20,6 @@ constexpr unsigned int length(const char *s) {
     return len;
 }
 
-#endif // CONSTEXPR_STRING_FUNCTIONS_HPP
+std::string sanitize(std::string raw);
+
+#endif // STRING_FUNCTIONS_HPP

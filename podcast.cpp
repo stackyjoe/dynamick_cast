@@ -1,6 +1,6 @@
 #include <QStandardItemModel>
 
-#include "constexpr_string_functions.hpp"
+#include "string_functions.hpp"
 #include "podcast.hpp"
 
 using std::string_literals::operator""s;
@@ -91,11 +91,11 @@ episode * podcast::get_episode(const QString &title) {
 }
 
 void podcast::populate(QTableView *tableview) {
-    auto * model = dynamic_cast<QStandardItemModel *>(tableview->model());
-    model->clear();
+    auto * model = static_cast<QStandardItemModel *>(tableview->model());
+    if(int count { model->rowCount() }; count > 0)
+        model->removeRows(0,model->rowCount());
 
     model->insertRows(0, static_cast<int>(items.size()));
-    model->insertColumns(0,1);
 
     for(size_t i = 0; i < items.size(); ++i) {
         items[i].populate(static_cast<int>(i), model);
@@ -109,7 +109,7 @@ void podcast::serialize_into(std::ofstream &file) {
     file << "\"managingEditor\": \"" << _managing_editor.toStdString() << "\",\n";
     // TODO: sanitize summary field.
     file << "\"summary\": \"" << " "/*_summary.toStdString()*/ << "\",\n";
-    file << "\"title\": \"" << _title << "\",\n";
+    file << "\"title\": \"" << sanitize(_title) << "\",\n";
     file << "\"guid\": \"" << _guid.toStdString() << "\",\n";
     file << "\"rss_feed_url\": \"" << rss_feed_url << "\",\n";
 

@@ -6,7 +6,7 @@
 #include <fstream>
 #include <thread>
 
-#include "constexpr_string_functions.hpp"
+#include "string_functions.hpp"
 #include "rss_getter.hpp"
 #include "url_parser.hpp"
 
@@ -45,7 +45,7 @@ std::tuple<std::string, std::string, std::string_view> rss_getter::get_feed(std:
     auto socket = std::make_unique<tcp::socket>(ioc);
     boost::asio::connect(*socket, results.begin(), results.end());
 
-    http::request<http::string_body> req {http::verb::get, pathname, 11 };
+    http::request<http::string_body> req {http::verb::get, pathname+query, 11 };
     req.set(http::field::host, hostname.c_str());
     req.set(http::field::user_agent, BOOST_BEAST_VERSION_STRING);
 

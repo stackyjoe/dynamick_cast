@@ -29,6 +29,7 @@ public:
 protected:
     void add_rss_from_dialog();
     void change_volume(int vol);
+    void closeEvent(QCloseEvent *ev) override;
     void podcastViewContextMenu(QPoint p);
     void episodeViewContextMenu(QPoint p);
     bool download(const QModelIndex &episode_index);
@@ -40,6 +41,9 @@ protected:
     void fetch_rss(std::string url);
     void load_subscriptions();
     void on_play_button_clicked();
+    [[noreturn]] void quit();
+    void remove_local_file(const QModelIndex &index);
+    void remove_local_files(std::string channel_name);
     void save_subscriptions();
     void seek();
     void set_active_channel(const QModelIndex &podcast_index);
@@ -48,7 +52,6 @@ protected:
     void sync_audio_with_library_state();
     void sync_ui_with_audio_state();
     void sync_ui_with_library_state();
-    [[noreturn]] void quit();
 
 
 private:

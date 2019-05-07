@@ -10,7 +10,6 @@
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 #include <experimental/filesystem>
-#include <gperftools/profiler.h>
 
 #include "episode.hpp"
 #include "mainwindow.hpp"
@@ -41,8 +40,16 @@ MainWindow::MainWindow(audio_interface &audio_handle, QWidget *parent) :
 {
     ui->setupUi(this);
     showMaximized();
-    ui->podcastView->setModel(new QStringListModel);
-    ui->episodeView->setModel(new QStandardItemModel);
+
+    auto * podcast_item_model = new QStandardItemModel;
+    QStringList headers { QString {"Podcast title"} };
+    podcast_item_model->setHorizontalHeaderLabels(std::move(headers));
+    ui->podcastView->setModel(podcast_item_model);
+
+    auto * episode_item_model = new QStandardItemModel;
+    QStringList ep_headers {QStringList { QString {"Episode title"} } };
+    episode_item_model->setHorizontalHeaderLabels(ep_headers);
+    ui->episodeView->setModel(episode_item_model);
 
     set_up_connections();
 }
@@ -76,6 +83,10 @@ void MainWindow::add_rss_from_dialog() {
 void MainWindow::change_volume(int vol) {
     volume = vol;
     _audio_handle.perform([vol](audio_wrapper &interface){interface.set_volume(vol);});
+}
+
+void MainWindow::closeEvent([[maybe_unused]] QCloseEvent *ev) {
+    quit();
 }
 
 bool MainWindow::download(const QModelIndex &index) {
@@ -264,6 +275,37 @@ void MainWindow::load_subscriptions() {
     }    
 }
 
+
+[[noreturn]] void MainWindow::quit() {
+    std::quick_exit(EXIT_SUCCESS);
+}
+
+void MainWindow::remove_local_file(const QModelIndex &index) {
+    auto itr = channels.find(open_channel);
+    if(itr == channels.end())
+        return;
+
+    QString episode_title = index.data(Qt::DisplayRole).toString();
+    podcast & cur_pod = itr->second;
+    std::string const * url = cur_pod.find_url(episode_title);
+
+    if(url == nullptr)
+        return;
+
+    auto pos = url->find_last_of('/')+1;
+    auto rpos = url->find_first_of('?');
+    std::string file_name = url->substr(pos, rpos-pos);
+    std::experimental::filesystem::path file(project_directory + open_channel + native_separator + file_name);
+    std::error_code ec;
+    std::experimental::filesystem::remove(file,ec);
+}
+
+void MainWindow::remove_local_files(std::string channel_name) {
+    std::experimental::filesystem::path dir(project_directory + channel_name + native_separator);
+    std::error_code ec;
+    std::experimental::filesystem::remove_all(dir, ec);
+}
+
 void MainWindow::save_subscriptions() {
     std::cout << "Saving subscriptions." << std::endl;
     std::string file_path = project_directory + "subscriptions.json"s;
@@ -305,12 +347,6 @@ void MainWindow::save_subscriptions() {
     }
 
     return;
-}
-
-[[noreturn]] void MainWindow::quit() {
-    ProfilerFlush();
-    ProfilerStop();
-    std::quick_exit(EXIT_SUCCESS);
 }
 
 void MainWindow::seek() {
@@ -411,7 +447,7 @@ void MainWindow::sync_ui_with_audio_state() {
 
 void MainWindow::sync_ui_with_library_state() {
     ui->episodeView->model()->removeRows(0, ui->episodeView->model()->rowCount());
-    ui->podcastView->model()->removeRows(0,ui->podcastView->model()->rowCount());
+    ui->podcastView->model()->removeRows(0, ui->podcastView->model()->rowCount());
 
     ui->podcastView->model()->insertRows(0, static_cast<int>(channels.size()));
 
@@ -421,6 +457,7 @@ void MainWindow::sync_ui_with_library_state() {
         ui->podcastView->model()->setData(index, QString::fromStdString(title), Qt::DisplayRole);
         ++cur_row;
     }
+
     ui->episodeView->update();
     ui->podcastView->update();
 }
@@ -442,7 +479,28 @@ void MainWindow::podcastViewContextMenu(QPoint p) {
         QMenu menu {ui->podcastView->indexWidget(index)};
         auto itr = channels.find(index.data(Qt::DisplayRole).toString().toStdString());
 
-        menu.addAction(QString("Fetch RSS"), [this, url=itr->second.rss_url()](){this->fetch_rss(url);});
+        menu.addAction(QString("Fetch RSS"),
+                       [this, url=itr->second.rss_url()](){
+                            this->fetch_rss(url);
+                        }
+        );
+
+        menu.addAction(QString("Remove podcast"),
+                       [this, itr, row=index.row()](){
+                            std::string channel_name = itr->first;
+                            this->channels.erase(itr);
+                            this->ui->podcastView->model()->removeRow(row);
+                            this->remove_local_files(channel_name);
+                        }
+        );
+
+        menu.addAction(QString("Remove local files"),
+                       [this, itr](){
+                            std::string channel_name = itr->first;
+                            this->remove_local_files(channel_name);
+                        }
+        );
+
         menu.exec(ui->podcastView->mapToGlobal(p));
     }
 }
@@ -452,6 +510,7 @@ void MainWindow::episodeViewContextMenu(QPoint p) {
         QMenu menu { ui->episodeView->indexWidget(index) };
 
         menu.addAction(QString("Download"), [this, &index](){this->download(index);});
+        menu.addAction(QString("Delete file"), [this, &index](){this->remove_local_file(index);});
         menu.addAction(QString("Play"), [this, &index](){this->download_or_play(index);});
         menu.exec(ui->episodeView->mapToGlobal(p));
     }

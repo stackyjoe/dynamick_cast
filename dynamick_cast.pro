@@ -22,7 +22,7 @@ DEFINES += QT_DEPRECATED_WARNINGS
 # You can also select to disable deprecated APIs only up to a certain version of Qt.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
-CONFIG += c++17
+CONFIG += c++1z
 
 SOURCES += \
         main.cpp \
@@ -32,27 +32,26 @@ SOURCES += \
     episode.cpp \
     audio_backends/audiere_wrapper.cpp \
     http_connection_resources.cpp \
-    url_parser.cpp
+    url_parser.cpp \
+    string_functions.cpp
 
 HEADERS += \
         mainwindow.hpp \
     podcast.hpp \
     episode.hpp \
-    constexpr_string_functions.hpp \
     audio_backends/audiere_wrapper.hpp \
     audio_interface.hpp \
     audio_wrapper.hpp \
-    constexpr_string_functions.hpp \
     user_desired_state.hpp \
     rss_getter.hpp \
     http_connection_resources.hpp \
-    url_parser.hpp
+    url_parser.hpp \
+    string_functions.hpp
 
 LIBS += -lc++experimental
 LIBS += -laudiere
 LIBS += -lFLAC
 LIBS += -logg
-LIBS += -lprofiler
 LIBS += -lvorbis
 LIBS += -lvorbisenc
 LIBS += -lvorbisfile
@@ -60,7 +59,7 @@ LIBS += -lvorbisfile
 FORMS += \
         mainwindow.ui
 
-QMAKE_CXXFLAGS += -std=c++17 -Wall -Wextra -pedantic-errors -O0 -pg
+QMAKE_CXXFLAGS += -Wall -Wextra -pedantic-errors -O0 -pg
 INCLUDEPATH += /usr/local/include
 
 # Default rules for deployment.
