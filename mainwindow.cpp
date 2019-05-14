@@ -14,6 +14,7 @@
 #include "episode.hpp"
 #include "mainwindow.hpp"
 #include "rss_getter.hpp"
+#include "string_functions.hpp"
 #include "url_parser.hpp"
 
 using std::string_literals::operator""s;
@@ -426,11 +427,14 @@ void MainWindow::sync_ui_with_audio_state() {
         return;
 
     // Synchronizes UI seek bar with audio backend.
-    float time_pos = _audio_handle.perform(
-            [](audio_wrapper &player){ return player.get_percent_played(); }
+    auto [dur, time_pos] = _audio_handle.perform(
+            [](audio_wrapper &player){ return std::make_pair(player.estimate_duration(), player.get_percent_played()); }
         );
 
     set_seek_bar_position(time_pos);
+    ui->cur_time_label->setText(to_time(static_cast<int>(dur*time_pos)));
+    ui->duration_label->setText(to_time(dur));
+
 
     // Synchronizes play/pause push button
     switch( _audio_handle.get_status() ) {

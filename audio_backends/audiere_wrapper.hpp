@@ -17,6 +17,7 @@ public:
     audiere_wrapper (audiere_wrapper &&) = default;
     audiere_wrapper &operator=(audiere_wrapper &&) = default;
 
+    int estimate_duration() const noexcept override;
     float get_percent_played() const noexcept override;
     PlayerStatus get_status() const noexcept override;
     const std::vector<std::string> & supported_file_formats() const noexcept override;
@@ -36,6 +37,7 @@ private:
     std::vector<std::string> supported_formats;
     audiere::AudioDevicePtr device;
     audiere::OutputStreamPtr decoder;
+    int estimated_duration;
 };
 
 extern audio_interface audio_handle;

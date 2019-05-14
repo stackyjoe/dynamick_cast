@@ -2,6 +2,7 @@
 #define STRING_FUNCTIONS_HPP
 
 #include <string>
+#include <QString>
 
 // This is a quick and dirty one someone wrote on stackoverflow
 //          https://stackoverflow.com/a/46711735
@@ -19,6 +20,8 @@ constexpr unsigned int length(const char *s) {
     }
     return len;
 }
+
+QString to_time(int seconds);
 
 std::string sanitize(std::string raw);
 

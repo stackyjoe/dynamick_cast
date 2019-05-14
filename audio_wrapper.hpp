@@ -24,6 +24,7 @@ public:
     /// \return A const reference to a vector of strings. The implementation
     /// is expected to own the memory.
     virtual const std::vector<std::string> &supported_file_formats()  const noexcept = 0;
+    virtual int estimate_duration() const noexcept = 0;
     virtual PlayerStatus get_status() const noexcept = 0;
     virtual float get_percent_played() const noexcept = 0;
 

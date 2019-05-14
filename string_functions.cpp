@@ -16,3 +16,18 @@ std::string sanitize(std::string raw) {
 
     return clean;
 }
+
+QString to_time(int seconds) {
+    int sec, min, hours;
+    sec = seconds % 60;
+    seconds /= 60;
+    min = seconds % 60;
+    seconds /= 60;
+    hours = seconds;
+
+    QString s = sec >= 10 ? QString::number(sec) : "0"+QString::number(sec);
+    QString m = min >= 10 ? QString::number(min) : "0"+QString::number(min);
+    QString h = QString::number(hours);
+
+    return h + ":" + m + ":" + s;
+}

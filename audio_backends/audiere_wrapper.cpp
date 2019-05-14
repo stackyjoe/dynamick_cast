@@ -8,14 +8,20 @@ using std::string_literals::operator""s;
 
 audiere_wrapper::audiere_wrapper() :
     supported_formats({"*.wav"s,"*.mp3"s,"*.ogg"s, "*.flac"s, "*.aiff"s}),
-    device(audiere::OpenDevice())
+    device(audiere::OpenDevice()),
+    estimated_duration(0)
 {
 
+}
+
+int audiere_wrapper::estimate_duration() const noexcept {
+    return estimated_duration;
 }
 
 float audiere_wrapper::get_percent_played() const noexcept {
     if(decoder.get() == nullptr)
         return 0;
+
     return static_cast<float>(decoder->getPosition())/static_cast<float>(std::max(1,decoder->getLength()));
 }
 
@@ -71,6 +77,16 @@ bool audiere_wrapper::open_from_file(const std::string &path) {
     audiere::OutputStream * os = audiere::OpenSound(device, path.c_str(), true);
     if(os == nullptr)
         return false;
+
+    if(audiere::SampleSourcePtr a { audiere::OpenSampleSource(path.c_str()) }; a.get() != nullptr) {
+        int channel_count, sample_rate;
+        audiere::SampleFormat sample_format;
+        a->getFormat(channel_count, sample_rate, sample_format);
+        estimated_duration = os->getLength()/std::max(1,sample_rate);
+    }
+    else {
+        estimated_duration = 0;
+    }
 
     decoder = audiere::OutputStreamPtr(os);
     return true;
