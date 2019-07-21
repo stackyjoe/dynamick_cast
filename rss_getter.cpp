@@ -78,7 +78,10 @@ void rss_getter::download_file(std::string hostname,
                                std::string target,
                                int port,
                                std::string file_destination,
-                               std::unique_lock<std::mutex> &&download_rights) {
+                               std::tuple<std::shared_ptr<std::mutex>, std::unique_lock<std::mutex>> &&download_rights) {
+
+    if(hostname.empty() or target.empty())
+        throw std::logic_error("Empty hostname or target");
 
     std::cout << "Attempting to resolve " << hostname << target << std::endl;
     auto const results = resolver.resolve(hostname.c_str(),
@@ -98,9 +101,13 @@ void rss_getter::download_file(std::string hostname,
     // We're transferring the ownership of the socket.
     auto network_resources = std::make_unique<http_connection_resources>(std::move(socket), 1024*1024*1024, std::move(download_rights));
 
-    http::async_read(network_resources->_socket,
-                     network_resources->_buffer,
-                     network_resources->_parser,
+    auto & skt = network_resources->_socket;
+    auto & bfr = network_resources->_buffer;
+    auto & prs = network_resources->_parser;
+
+    http::async_read(skt,
+                     bfr,
+                     prs,
                      [file_destination, this, network_resources = std::move(network_resources)]
                      (boost::beast::error_code const &ec, [[maybe_unused]] size_t bytes_transferred )
                      // Let's the lambda capture by non-const reference
@@ -122,6 +129,7 @@ void rss_getter::download_file(std::string hostname,
             output_file.close();
 
             std::cout << "Done writing to file." << std::endl;
+            std::get<1>(network_resources->_download_rights).release();
             return;
         }
         case http::status::found: {

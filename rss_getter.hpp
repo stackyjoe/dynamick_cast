@@ -17,7 +17,7 @@ public:
                        std::string target,
                        int port,
                        std::string file_destination,
-                       std::unique_lock<std::mutex> &&download_rights);
+                       std::tuple<std::shared_ptr<std::mutex>, std::unique_lock<std::mutex>> &&download_rights);
 
 protected:
     boost::asio::io_context ioc;

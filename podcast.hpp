@@ -24,8 +24,9 @@ public:
     std::string const * find_url(const QString &title);
     void fill_from_json(boost::property_tree::ptree &parsed_json);
     void fill_from_xml(boost::property_tree::ptree &parsed_xml);
+    void fill_from_xml(pugi::xml_document &doc);
     episode * get_episode(const QString &title);
-    void populate(QTableView* );
+    void populate(QTableView* view, std::string project_directory);
     void serialize_into(std::ofstream &file);
     const std::string & title();
     std::string rss_url();

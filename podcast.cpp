@@ -75,6 +75,74 @@ void podcast::fill_from_xml(boost::property_tree::ptree &parsed_xml) {
     }
 }
 
+void podcast::fill_from_xml(pugi::xml_document &parsed_xml) {
+    auto itr = parsed_xml.children().begin()->begin();
+    auto end = parsed_xml.children().begin()->end();
+
+    while(itr != end) {
+        //std::cout << itr->name() << " " << itr->text() << " " << itr->text().get() << std::endl;
+        switch(hash(itr->name())) {
+        case hash("rss_feed_url"):
+            if(strcmp(itr->name(), "rss_feed_url") == 0)
+
+                //itr->name();
+                rss_feed_url = itr->text().get();
+            break;
+        case hash("title"):
+            if(strcmp(itr->name(), "title")==0)
+                _title = itr->text().get();
+            break;
+        case hash("author"):
+            if(strcmp(itr->name(), "author")==0)
+                _author = QString::fromStdString(itr->text().get());
+            break;
+        case hash("lastBuildDate"):
+            if(strcmp(itr->name(), "lastBuildDate")==0)
+                _last_build_date = QString::fromStdString(itr->text().get());
+            break;
+        case hash("managingEditor"):
+            if(strcmp(itr->name(), "managingEditor")==0)
+                _managing_editor = QString::fromStdString(itr->text().get());
+            break;
+        case hash("itunes:summary"):
+            if(strcmp(itr->name(), "itunes:summary")==0)
+                _summary = QString::fromStdString(itr->text().get());
+            break;
+        case hash("item"):
+            if(strcmp(itr->name(), "item")==0)
+                goto parse_items;
+            break;
+        default:
+            break;
+        }
+    ++itr;
+    }
+
+    parse_items:
+    ;
+
+    if(itr == end)
+        throw std::invalid_argument("constructor of podcast class called with inappropriate xml argument.");
+
+    size_t loops = 0;
+    while(itr != end) {
+        if(strcmp(itr->name(), "item")==0) {
+            try {
+                //std::cout << itr->children().begin()->text().get() << std::endl;
+                items.emplace_back(episode(itr));
+            }
+            catch(std::exception const &e) {
+                std::cout << "An exception occurred: " << e.what() << std::endl;
+                //item_errors.emplace_back(e.what());
+            }
+        }
+
+        ++loops;
+        ++itr;
+    }
+
+}
+
 std::string const * podcast::find_url(const QString &title) {
     auto results = std::find_if(items.cbegin(), items.cend(), [&title](const episode &ep){ return ep.has_title(title);});
     if(results == items.end())
@@ -90,7 +158,7 @@ episode * podcast::get_episode(const QString &title) {
     return &*results;
 }
 
-void podcast::populate(QTableView *tableview) {
+void podcast::populate(QTableView *tableview, std::string directory) {
     auto * model = static_cast<QStandardItemModel *>(tableview->model());
     if(int count { model->rowCount() }; count > 0)
         model->removeRows(0,model->rowCount());
@@ -98,7 +166,7 @@ void podcast::populate(QTableView *tableview) {
     model->insertRows(0, static_cast<int>(items.size()));
 
     for(size_t i = 0; i < items.size(); ++i) {
-        items[i].populate(static_cast<int>(i), model);
+        items[i].populate(static_cast<int>(i), model, directory + _title + "/"s);
     }
 }
 

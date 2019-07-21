@@ -4,6 +4,7 @@
 #include <QContextMenuEvent>
 #include <QMainWindow>
 
+#include <future>
 #include <map>
 #include <thread>
 
@@ -11,7 +12,7 @@
 
 #include "audio_interface.hpp"
 #include "podcast.hpp"
-#include "rss_getter.hpp"
+#include "getter.hpp"
 #include "user_desired_state.hpp"
 
 
@@ -34,9 +35,10 @@ protected:
     void episodeViewContextMenu(QPoint p);
     bool download(const QModelIndex &episode_index);
     bool download(podcast &cur_pod,
-                  QString episode_title,
-                  std::string url,
-                  std::string file_dest);
+                                              QString episode_title,
+                                              std::string url,
+                                              std::string file_dest,
+                                              int row);
     void download_or_play(const QModelIndex &episode_index);
     void fetch_rss(std::string url);
     void load_subscriptions();
@@ -64,7 +66,7 @@ private:
     std::string home_path;
     std::string native_separator;
     std::string project_directory;
-    rss_getter getter;
+    getter get;
     std::thread daemon;
     std::atomic<int> volume;
 };

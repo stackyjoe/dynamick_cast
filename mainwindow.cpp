@@ -9,6 +9,8 @@
 #include <boost/iostreams/stream.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/property_tree/xml_parser.hpp>
+#include <pugixml.hpp>
+
 #include <experimental/filesystem>
 
 #include "episode.hpp"
@@ -48,7 +50,7 @@ MainWindow::MainWindow(audio_interface &audio_handle, QWidget *parent) :
     ui->podcastView->setModel(podcast_item_model);
 
     auto * episode_item_model = new QStandardItemModel;
-    QStringList ep_headers {QStringList { QString {"Episode title"} } };
+    QStringList ep_headers { QStringList { QString {"Status"}, QString {"Episode title"} } };
     episode_item_model->setHorizontalHeaderLabels(ep_headers);
     ui->episodeView->setModel(episode_item_model);
 
@@ -100,7 +102,7 @@ bool MainWindow::download(const QModelIndex &index) {
     std::string const * url = cur_pod.find_url(episode_title);
 
     if(url == nullptr)
-        return false;
+        return true;
 
     auto pos = url->find_last_of('/')+1;
     auto rpos = url->find_first_of('?');
@@ -113,42 +115,71 @@ bool MainWindow::download(const QModelIndex &index) {
 
     std::string local_path = project_directory + open_channel + native_separator + file_name;
 
-    return download(cur_pod, episode_title, *url, local_path);
+    return download(cur_pod, episode_title, *url, local_path, index.row());
 }
 
 bool MainWindow::download(podcast &cur_pod,
                           QString episode_title,
                           std::string url,
-                          std::string file_dest) {
+                          std::string file_dest,
+                          [[maybe_unused]] int row) {
 
-    try {
+    //try {
         episode * ep = cur_pod.get_episode(episode_title);
 
         if(ep == nullptr)
             throw std::invalid_argument("Can't find given episode title in the current podcast.");
 
-        std::optional<std::unique_lock<std::mutex>> download_rights = ep->get_download_rights();
+        auto download_rights = ep->get_download_rights();
 
-        if(not download_rights.has_value())
+        if(not std::get<1>(*download_rights).emplace(std::get<0>(*download_rights)))
             return false;
 
-        std::thread thd {
-                    [url, file_dest, this, download_rights = std::move(download_rights)]() mutable {
-                        auto [protocol, hostname, target, query] = parse_url(url);
-                        this->getter.download_file(hostname,
-                                                   target,
-                                                   80,
-                                                   file_dest,
-                                                   std::move(*download_rights));}
-        };
+        auto cmpl = [](size_t, size_t) -> void {};
+        auto prog = [file_dest, this, pod_name=cur_pod.title(), rights=std::move(download_rights), &episode_title] (
+                boost::beast::error_code const &ec,
+                size_t bytes_read,
+                http_connection_resources &resources) mutable -> void {
 
-        thd.detach();
-    }
-    catch(const std::exception &e) {
-        std::cout << e.what() << std::endl;
-    }
+            if(ec or bytes_read == 0) {
+                return;
+            }
 
-    return true;
+            std::ofstream output_file(file_dest, std::ios::binary);
+
+            output_file << resources.parser_.get();
+            output_file.close();
+            std::cout << "wrote to file" << std::endl;
+
+            auto r = this->channels.find(pod_name);
+        if(r == this->channels.end() or r->first != this->open_channel) {
+            return;
+        }
+        auto &pod = r->second;
+        auto * ep = pod.get_episode(QString::fromStdString(pod_name));
+        if(ep == nullptr) {
+            return;
+        }
+
+        auto *model = static_cast<QStandardItemModel*>(ui->podcastView->model());
+        auto list = model->findItems(episode_title, Qt::MatchExactly, 1);
+
+        if(list.empty()) {
+            return;
+        }
+
+
+        auto index = list.first();
+
+        std::cout << "attempting to populate\n";
+        ep->populate(index->row(), model, project_directory+r->first+native_separator);
+        rights.reset();
+
+        //resources.promise.set_value(true);
+        return;
+    };
+
+    return this->get.async_download(url, std::move(cmpl), std::move(prog));
 }
 
 void MainWindow::download_or_play(const QModelIndex &index) {
@@ -196,25 +227,35 @@ void MainWindow::download_or_play(const QModelIndex &index) {
         }
     }
     else {
-        download(cur_pod, episode_title, *url, local_path);
+        download(cur_pod, episode_title, *url, local_path, index.row());
+
+        episode * ep = cur_pod.get_episode(episode_title);
+        if(ep) {
+            ep->populate(index.row(),
+                         static_cast<QStandardItemModel*>(ui->episodeView->model()),
+                         project_directory + open_channel + native_separator);
+        }
     }
 }
 
 void MainWindow::fetch_rss(std::string url) {
-    boost::property_tree::ptree tree;
+    //boost::property_tree::ptree tree;
+    pugi::xml_document doc;
 
 
     // rss_feed is a std::string owning a possibly very large string (~950000 bytes in one example I'm testing on)
     // xml_segment is a std::string_view to the xml segment of it. The alternative is making a deep copy with
     // std::string::substr(), or using std::string::erase() which still has to move most of the data.
     try {
-        auto [clean_url, rss_feed, xml_segment] = getter.get_feed(url, 80);
+        auto [clean_url, rss_feed, xml_segment] = get.get_feed(url, 80);
 
         std::cout << clean_url << std::endl;
         url = clean_url;
 
         boost::iostreams::stream<boost::iostreams::array_source> stream(xml_segment.begin(),xml_segment.size());
-        boost::property_tree::read_xml(stream, tree);
+        //boost::property_tree::read_xml(stream, tree);
+
+        doc.load_buffer(xml_segment.begin(), xml_segment.size());
     }
     catch(const std::exception &e) {
         std::cout << e.what() << std::endl;
@@ -222,13 +263,16 @@ void MainWindow::fetch_rss(std::string url) {
     }
 
     podcast new_channel(url);
-    new_channel.fill_from_xml(tree);
+    //new_channel.fill_from_xml(tree);
+    new_channel.fill_from_xml(doc);
 
     std::string title = new_channel.title();
     auto [itr, was_inserted] = channels.insert_or_assign(title, std::move(new_channel));
 
     if(not was_inserted) {
         // TODO: update ui->episodeView
+        if(open_channel == title)
+            itr->second.populate(ui->episodeView, project_directory );
         std::cout << "Assigned " << title << std::endl;
         return;
     }
@@ -368,7 +412,7 @@ void MainWindow::set_active_channel(const QModelIndex &index) {
 
     podcast &pod = itr->second;
 
-    pod.populate(ui->episodeView);
+    pod.populate(ui->episodeView, project_directory);
 }
 
 void MainWindow::set_seek_bar_position(float percent) {
@@ -450,9 +494,7 @@ void MainWindow::sync_ui_with_audio_state() {
 }
 
 void MainWindow::sync_ui_with_library_state() {
-    ui->episodeView->model()->removeRows(0, ui->episodeView->model()->rowCount());
     ui->podcastView->model()->removeRows(0, ui->podcastView->model()->rowCount());
-
     ui->podcastView->model()->insertRows(0, static_cast<int>(channels.size()));
 
     int cur_row=0;
@@ -460,6 +502,13 @@ void MainWindow::sync_ui_with_library_state() {
         QModelIndex index = ui->podcastView->model()->index(cur_row,0);
         ui->podcastView->model()->setData(index, QString::fromStdString(title), Qt::DisplayRole);
         ++cur_row;
+    }
+
+
+    ui->episodeView->model()->removeRows(0, ui->episodeView->model()->rowCount());
+    if(auto itr = channels.find(open_channel); itr != channels.end()) {
+        auto &pod = itr->second;
+        pod.populate(ui->episodeView, project_directory);
     }
 
     ui->episodeView->update();
