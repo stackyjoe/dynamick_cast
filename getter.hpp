@@ -34,7 +34,7 @@ public:
     // returns size of requested file (if that is in the header provided by the server)
     // and also returns url to file
     std::tuple<size_t, std::string> sync_get_header(std::string url);
-    std::tuple<std::string, std::string, std::string_view> get_feed(std::string url, int port);
+    std::tuple<std::string, std::string, size_t, size_t> get_feed(std::string url, int port);
 
 protected:
     boost::asio::io_context ioc;

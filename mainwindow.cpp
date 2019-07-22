@@ -242,18 +242,21 @@ void MainWindow::fetch_rss(std::string url) {
     //boost::property_tree::ptree tree;
     pugi::xml_document doc;
 
-
     // rss_feed is a std::string owning a possibly very large string (~950000 bytes in one example I'm testing on)
     // xml_segment is a std::string_view to the xml segment of it. The alternative is making a deep copy with
     // std::string::substr(), or using std::string::erase() which still has to move most of the data.
     try {
-        auto [clean_url, rss_feed, xml_segment] = get.get_feed(url, 80);
+        auto [clean_url, rss_feed, lpos, len] = get.get_feed(url, 80);
 
-        std::cout << clean_url << std::endl;
+        std::cout << "Cleaned url is: " << clean_url << "\nRSS feed is length: " << rss_feed.length() << std::endl;
         url = clean_url;
 
-        boost::iostreams::stream<boost::iostreams::array_source> stream(xml_segment.begin(),xml_segment.size());
+        //boost::iostreams::stream<boost::iostreams::array_source> stream(xml_segment.begin(),xml_segment.size());
         //boost::property_tree::read_xml(stream, tree);
+
+        if(rss_feed.empty())
+            throw std::runtime_error("Unable to connect to URL");
+        auto xml_segment = std::string_view(rss_feed).substr(lpos, len);
 
         doc.load_buffer(xml_segment.begin(), xml_segment.size());
     }

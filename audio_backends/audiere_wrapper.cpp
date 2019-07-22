@@ -11,7 +11,19 @@ audiere_wrapper::audiere_wrapper() :
     device(audiere::OpenDevice()),
     estimated_duration(0)
 {
+    if(device.get() == nullptr) {
+        std::vector<audiere::AudioDeviceDesc> device_descriptions;
+        audiere::GetSupportedAudioDevices(device_descriptions);
 
+        std::cout << "Found " << device_descriptions.size() << " devices.\n";
+        for(auto const &desc : device_descriptions)
+            std::cout << "audio device: " << desc.name << "\n";
+
+        auto * ptr = audiere::OpenDevice(device_descriptions[0].name.c_str());
+        device = ptr;
+        if(device.get() == nullptr)
+            throw std::runtime_error("unable to get a working audio device.");
+    }
 }
 
 int audiere_wrapper::estimate_duration() const noexcept {
@@ -75,8 +87,12 @@ void audiere_wrapper::stop() {
 
 bool audiere_wrapper::open_from_file(const std::string &path) {
     audiere::OutputStream * os = audiere::OpenSound(device, path.c_str(), true);
-    if(os == nullptr)
+    if(os == nullptr) {
+        if(device.get() == nullptr)
+            std::cout << "Null audio device.\n";
+        std::cout << "Unable to open sound file:" << path << ".\n";
         return false;
+    }
 
     if(audiere::SampleSourcePtr a { audiere::OpenSampleSource(path.c_str()) }; a.get() != nullptr) {
         int channel_count, sample_rate;

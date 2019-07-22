@@ -156,7 +156,14 @@ void episode::populate(int i, QStandardItemModel *model, std::string directory) 
             auto rpos = audio_url.find_first_of('?');
             std::string file_name { audio_url.substr(pos, rpos-pos) };
             if(std::fstream file{directory+file_name}; file.good()) {
-                model->clearItemData(index);
+
+                //model->clearItemData(index);
+                auto item = model->itemFromIndex(index);
+                if(item != nullptr){
+                    item->setData(QVariant(), Qt::UserRole);
+                    item->setData(QVariant(), Qt::DecorationRole);
+                    item->setData(QVariant(), Qt::DisplayRole);
+                }
                 model->setData(index, QIcon(":/icons/icons/check-square.svg").pixmap(QSize(16,16)), Qt::DecorationRole);
             }
         }

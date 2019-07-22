@@ -208,7 +208,7 @@ std::tuple<size_t, std::string> getter::sync_get_header(std::string url) {
 }
 
 
-std::tuple<std::string, std::string, std::string_view> getter::get_feed(std::string url, int port) {
+std::tuple<std::string, std::string, size_t, size_t> getter::get_feed(std::string url, int port) {
     auto [protocol, hostname, pathname, query ] = parse_url(url);
 
 
@@ -240,11 +240,11 @@ std::tuple<std::string, std::string, std::string_view> getter::get_feed(std::str
     size_t rpos = full_response.find(channel_end, full_response.size()-1000);
 
     if(lpos == std::string_view::npos or rpos == std::string_view::npos)
-        return {hostname+pathname, std::string(), std::string_view()};
+        return {hostname+pathname, std::string(), 0,0};
 
     rpos += length(channel_end);
-    std::string_view xml_segment(std::string_view(full_response).substr(lpos,rpos-lpos));
+    //std::string_view xml_segment(std::string_view(full_response).substr(lpos,rpos-lpos));
 
-    return {hostname+pathname, full_response, xml_segment};
+    return {hostname+pathname, full_response, lpos, rpos-lpos};
 }
 
