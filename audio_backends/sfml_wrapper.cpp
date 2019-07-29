@@ -1,11 +1,29 @@
 #include "audio_backends/sfml_wrapper.hpp"
 
+#if USE_SFML_MP3_EXPERIMENTAL
+#include "contrib/sfml_mp3/mp3.hpp"
+#endif
+
+#include <iostream>
+
 audio_wrapper::~audio_wrapper() = default;
 
 using std::string_literals::operator""s;
 
-sfml_wrapper::sfml_wrapper()  : supported_formats({ "*.wav"s, "*.ogg"s, "*.flac"s}) { }
+sfml_wrapper::sfml_wrapper()
+    : supported_formats(
+          #ifdef USE_SFML_MP3_EXPERIMENTAL
+          {"*.wav"s, "*.ogg"s, "*.flac"s, "*.mp3"s}
+          #else
+          {"*.wav"s, "*.ogg"s, "*.flac"s}
+          #endif
+          ) {
 
+}
+
+int sfml_wrapper::estimate_duration() const noexcept {
+    return static_cast<int>(interface.getDuration().asSeconds());
+}
 
 float sfml_wrapper::get_percent_played() const noexcept {
     return static_cast<float>(interface.getPlayingOffset().asMilliseconds())/static_cast<float>(std::max(interface.getDuration().asMilliseconds(),1));
@@ -53,6 +71,7 @@ void sfml_wrapper::stop() {
 }
 
 bool sfml_wrapper::open_from_file(const std::string &path) {
+
     return interface.openFromFile(path);
 }
 

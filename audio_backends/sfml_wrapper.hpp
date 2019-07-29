@@ -3,6 +3,8 @@
 
 #include <SFML/Audio.hpp>
 
+#include "contrib/sfml_mp3/music_adapter.hpp"
+
 #include "audio_interface.hpp"
 
 class sfml_wrapper : public audio_wrapper
@@ -17,9 +19,10 @@ public:
     sfml_wrapper(sfml_wrapper &&other) = default;
     sfml_wrapper &operator=(sfml_wrapper &&other) = default;
 
+    int estimate_duration() const noexcept override;
     float get_percent_played() const noexcept override;
     PlayerStatus get_status() const noexcept override;
-    const std::vector<std::string> & supported_file_formats() const noexcept override;
+    std::vector<std::string> const & supported_file_formats() const noexcept override;
 
 
     void pause() override;
@@ -34,8 +37,8 @@ protected:
     sfml_wrapper();
 
 private:
-    std::vector<std::string> supported_formats;
-    sf::Music interface;
+    std::vector<std::string> const supported_formats;
+    music_adapter interface;
 };
 
 extern audio_interface audio_handle;

@@ -22,34 +22,32 @@ DEFINES += QT_DEPRECATED_WARNINGS
 # You can also select to disable deprecated APIs only up to a certain version of Qt.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
-CONFIG += c++17
+CONFIG += c++1z
 
 SOURCES += \
         main.cpp \
         mainwindow.cpp \
-    #rss_getter.cpp \
     podcast.cpp \
     episode.cpp \
-    audio_backends/audiere_wrapper.cpp \
     http_connection_resources.cpp \
     url_parser.cpp \
     string_functions.cpp \
-    getter.cpp
+    getter.cpp \
+    contrib/sfml_mp3/music_adapter.cpp
 
 HEADERS += \
         mainwindow.hpp \
     podcast.hpp \
     episode.hpp \
-    audio_backends/audiere_wrapper.hpp \
     audio_interface.hpp \
     audio_wrapper.hpp \
     user_desired_state.hpp \
-    #rss_getter.hpp \
     http_connection_resources.hpp \
     url_parser.hpp \
     string_functions.hpp \
     getter.hpp \
-    contrib/function2/function2.hpp
+    contrib/function2/function2.hpp \
+    contrib/sfml_mp3/music_adapter.hpp
 
 *-g++ {
     LIBS += -lstdc++fs
@@ -59,16 +57,52 @@ HEADERS += \
     LIBS += -lc++experimental
 }
 
+DEFINES += USE_SFML
+DEFINES += USE_SFML_MP3_EXPERIMENTAL
+#DEFINES += USE_AUDIERE
+
 LIBS += -lboost_system
 LIBS += -lcrypto
 LIBS += -lssl
 LIBS += -lpugixml
+
+contains(DEFINES, USE_SFML) {
+message("Using SFML audio backend.")
+LIBS += -lsfml-audio            # SFML audio shared library
+LIBS += -lsfml-system           # SFML system shared library, needed for sf::Time
+LIBS += -lopenal                # dependency
+LIBS += -lFLAC                  # dependency
+LIBS += -lvorbisenc             # dependency
+LIBS += -lvorbisfile            # dependency
+LIBS += -lvorbis                # dependency
+LIBS += -logg                   # dependency
+
+SOURCES += audio_backends/sfml_wrapper.cpp
+HEADERS += audio_backends/sfml_wrapper.hpp
+
+}
+
+contains(DEFINES, USE_SFML_MP3_EXPERIMENTAL) {
+message("Using experimental SFML mp3 support")
+LIBS += -lmpg123
+
+SOURCES += contrib/sfml_mp3/mp3.cpp
+HEADERS += contrib/sfml_mp3/mp3.hpp
+
+}
+
+contains(DEFINES, USE_AUDIERE) {
+message("Using Audiere audio backend.")
 LIBS += -laudiere
 LIBS += -lFLAC
 LIBS += -logg
 LIBS += -lvorbis
 LIBS += -lvorbisenc
 LIBS += -lvorbisfile
+
+SOURCES += audio_backends/audiere_wrapper.cpp
+HEADERS += audio_backends/audiere_wrapper.hpp
+}
 
 FORMS += \
         mainwindow.ui
