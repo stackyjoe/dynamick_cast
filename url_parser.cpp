@@ -11,8 +11,8 @@ std::tuple<std::string,std::string,std::string,std::string> parse_url(std::strin
     using boost::spirit::lex::_start;
     using boost::spirit::lex::_end;
 
-    if( boost::spirit::x3::phrase_parse(url.begin(),
-                                        url.end(),
+    bool ok = boost::spirit::x3::phrase_parse(url.begin(),
+                                              url.end(),
             (
                 -(+boost::spirit::x3::alpha >> "://") [([&segments](auto &ctx) mutable {std::get<0>(segments) = boost::optional<std::string>(boost::spirit::x3::_attr(ctx)).value();})] >>
                 (+(boost::spirit::x3::char_ - (boost::spirit::x3::char_("[/?]"))))[([&segments](auto &ctx) mutable {std::get<1>(segments) = boost::optional<std::string>(boost::spirit::x3::_attr(ctx)).value();})] >>
@@ -22,8 +22,10 @@ std::tuple<std::string,std::string,std::string,std::string> parse_url(std::strin
                         ((+boost::spirit::x3::char_)[([&segments](auto &ctx) mutable {std::get<3>(segments) = boost::optional<std::string>(boost::spirit::x3::_attr(ctx)).value();})])
                     )
                 )
-            ), boost::spirit::x3::space))
+       ), boost::spirit::x3::space);
+    if(ok){
         return segments;
+    }
 
     std::cout << "Failed to parse.\n";
 

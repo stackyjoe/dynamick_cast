@@ -151,6 +151,8 @@ bool MainWindow::download(podcast &cur_pod,
             output_file.close();
             std::cout << "wrote to file" << std::endl;
 
+            std::get<1>(*rights) = std::nullopt;
+
             auto r = this->channels.find(pod_name);
         if(r == this->channels.end() or r->first != this->open_channel) {
             return;

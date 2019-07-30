@@ -3,8 +3,8 @@
 
 #include <iostream>
 #include <fstream>
-#include <future>
 #include <functional>
+#include <future>
 #include <thread>
 #include <tuple>
 #include <variant>
@@ -26,6 +26,12 @@ class getter
 public:
     getter();
     ~getter();
+
+    getter(getter const &) = delete;
+    getter &operator=(getter const &) = delete;
+
+    getter(getter &&) = default;
+    getter &operator=(getter &&) = default;
 
     bool async_download(std::string url,
                         fu2::unique_function<void(size_t, size_t)> &&progress_handler,

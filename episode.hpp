@@ -1,13 +1,13 @@
 #ifndef EPISODE_HPP
 #define EPISODE_HPP
 
+#include <fstream>
+#include <iostream>
+#include <mutex>
+
 #include <QModelIndex>
 #include <QStandardItemModel>
 #include <QString>
-
-#include <iostream>
-#include <fstream>
-#include <mutex>
 
 #include <boost/property_tree/ptree.hpp>
 #include <pugixml.hpp>
@@ -18,8 +18,8 @@ class episode
 {
 public:
     episode();
-    explicit episode(pugi::xml_node::iterator itr);
-    void fill(pugi::xml_node::iterator itr);
+    explicit episode(pugi::xml_node::iterator iterator);
+    void fill(pugi::xml_node::iterator iterator);
 
     // The following two are left in but as is are dead code. ptree seems finicky and randomly
     // fails to parse xml that the pugi library succeeds with, however if you really want one less

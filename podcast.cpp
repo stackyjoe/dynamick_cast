@@ -175,7 +175,7 @@ void podcast::serialize_into(std::ofstream &file) {
     file << "\"author\": \"" << _author.toStdString() << "\",\n";
     file << "\"lastBuildDate\": \"" << _last_build_date.toStdString() << "\",\n";
     file << "\"managingEditor\": \"" << _managing_editor.toStdString() << "\",\n";
-    // TODO: sanitize summary field.
+    // TODO(joe): sanitize summary field.
     file << "\"summary\": \"" << " "/*_summary.toStdString()*/ << "\",\n";
     file << "\"title\": \"" << sanitize(_title) << "\",\n";
     file << "\"guid\": \"" << _guid.toStdString() << "\",\n";

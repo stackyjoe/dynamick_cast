@@ -12,6 +12,8 @@ class podcast
 {
 public:
     podcast() = delete;
+    ~podcast() = default;
+
     podcast(const podcast &) = delete;
     podcast &operator=(const podcast &) = delete;
 
@@ -24,7 +26,7 @@ public:
     std::string const * find_url(const QString &title);
     void fill_from_json(boost::property_tree::ptree &parsed_json);
     void fill_from_xml(boost::property_tree::ptree &parsed_xml);
-    void fill_from_xml(pugi::xml_document &doc);
+    void fill_from_xml(pugi::xml_document &parsed_xml);
     episode * get_episode(const QString &title);
     void populate(QTableView* view, std::string project_directory);
     void serialize_into(std::ofstream &file);

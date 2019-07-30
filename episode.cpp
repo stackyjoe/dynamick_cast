@@ -3,10 +3,13 @@
 
 #include <QPixmap>
 
-#include "string_functions.hpp"
 #include "episode.hpp"
+#include "string_functions.hpp"
 
-episode::episode() : download_lock { std::make_shared<std::tuple<std::mutex, std::optional<std::unique_lock<std::mutex> > >>() } {}
+episode::episode()
+    : download_lock (std::make_shared<std::tuple<std::mutex, std::optional<std::unique_lock<std::mutex> > >>()) {
+
+}
 
 episode::episode(boost::property_tree::ptree::iterator tree_node)
     : download_lock { std::make_shared<std::tuple<std::mutex, std::optional<std::unique_lock<std::mutex> > >>() }
@@ -169,10 +172,10 @@ void episode::populate(int i, QStandardItemModel *model, std::string directory) 
         }
         else {
             // Someone must be downloading
-            //TODO: implement UI updates based on download progress
+            //TODO(joe): implement UI updates based on download progress
 
             //QString::fromUtf8("\xf0\x9f\x95\x97")
-            std::cout << "Loading " << title.toStdString() << "\n";
+            std::cout << "Still downloading " << title.toStdString() << "\n";
             model->setData(index, QIcon(":/icons/icons/loader.svg").pixmap(QSize(16,16)), Qt::DecorationRole);
         }
     }

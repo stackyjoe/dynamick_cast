@@ -1,10 +1,10 @@
 #include "string_functions.hpp"
 
-unsigned int hash(const std::string s, int off) {
+unsigned int hash(std::string const &s, int off) {
     return hash(s.c_str(), off);
 }
 
-std::string sanitize(std::string raw) {
+std::string sanitize(std::string const &raw) {
     std::string clean;
     clean.reserve(raw.size()*2);
     for(auto ch : raw) {
