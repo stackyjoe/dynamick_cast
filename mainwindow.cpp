@@ -3,6 +3,7 @@
 #include <QFileDialog>
 #include <QInputDialog>
 #include <QLineEdit>
+#include <QMetaObject>
 #include <QStringListModel>
 #include <QUrl>
 
@@ -11,7 +12,7 @@
 #include <boost/property_tree/xml_parser.hpp>
 #include <pugixml.hpp>
 
-#include <experimental/filesystem>
+#include <filesystem>
 
 #include "episode.hpp"
 #include "mainwindow.hpp"
@@ -19,7 +20,7 @@
 #include "string_functions.hpp"
 #include "url_parser.hpp"
 
-using std::string_literals::operator""s;
+using namespace std::string_literals;
 
 MainWindow::MainWindow(audio_interface &audio_handle, QWidget *parent) :
     QMainWindow(parent),
@@ -33,10 +34,22 @@ MainWindow::MainWindow(audio_interface &audio_handle, QWidget *parent) :
         [this](){
             while(1) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                if(std::unique_lock l(this->daemon_lock, std::try_to_lock); l.owns_lock()) {
+                    this->sync_audio_with_library_state();
 
-                this->sync_audio_with_library_state();
+                    this->sync_ui_with_audio_state();
 
-                this->sync_ui_with_audio_state();
+                    /*
+                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+                    this->sync_audio_with_library_state();
+
+                    this ->sync_ui_with_audio_state();
+
+                    (std::chrono::milliseconds(100));
+
+                    this->sync_ui_with_download_state();*/
+                }
             }
         }),
     volume(100)
@@ -50,7 +63,7 @@ MainWindow::MainWindow(audio_interface &audio_handle, QWidget *parent) :
     ui->podcastView->setModel(podcast_item_model);
 
     auto * episode_item_model = new QStandardItemModel;
-    QStringList ep_headers { QStringList { QString {"Status"}, QString {"Episode title"} } };
+    QStringList ep_headers { QStringList { QString {""}, QString{"Newness"}, QString {"Episode title"} } };
     episode_item_model->setHorizontalHeaderLabels(ep_headers);
     ui->episodeView->setModel(episode_item_model);
 
@@ -70,6 +83,11 @@ void MainWindow::set_up_connections() {
     connect(ui->seek_slider, &QAbstractSlider::sliderReleased, this, [&](){this->seek();});
     connect(ui->seek_slider, &QAbstractSlider::sliderPressed, this, [&](){seek_bar_lock.lock();});
     connect(ui->play_button, &QAbstractButton::clicked, this, &MainWindow::on_play_button_clicked);
+
+    // Not 100% sure why this is needed but it complains about the type not being registered and crashes without it.
+    qRegisterMetaType<QVector<int> >("QVector<int>");
+    connect(this, SIGNAL(requestEpisodeViewUpdate()), ui->episodeView, SLOT(update()));
+    connect(this, SIGNAL(request_update_at(QModelIndex)), ui->episodeView, SLOT(update(QModelIndex)));
 }
 
 void MainWindow::add_rss_from_dialog() {
@@ -92,37 +110,40 @@ void MainWindow::closeEvent([[maybe_unused]] QCloseEvent *ev) {
     quit();
 }
 
-bool MainWindow::download(const QModelIndex &index) {
+void MainWindow::download(const QModelIndex &index) {
     auto itr = channels.find(open_channel);
-    if(itr == channels.end())
-        return false;
+    if(itr == channels.end()) {
+        return;
+    }
 
     QString episode_title = index.data(Qt::DisplayRole).toString();
     podcast & cur_pod = itr->second;
     std::string const * url = cur_pod.find_url(episode_title);
 
-    if(url == nullptr)
-        return true;
+    if(url == nullptr) {
+        throw std::runtime_error("Empty URL in MainWindow::download");
+    }
 
     auto pos = url->find_last_of('/')+1;
     auto rpos = url->find_first_of('?');
     std::string file_name = url->substr(pos, rpos-pos);
 
     if(not QDir::root().mkpath(QString::fromStdString(project_directory + native_separator + open_channel)))
-        throw std::experimental::filesystem::filesystem_error("Could not create directory "s,
+        throw std::filesystem::filesystem_error("Could not create directory "s,
                                                               project_directory + native_separator + open_channel,
                                                               std::error_code());
 
     std::string local_path = project_directory + open_channel + native_separator + file_name;
 
-    return download(cur_pod, episode_title, *url, local_path, index.row());
+    download(cur_pod, episode_title, *url, local_path, index.row(), index);
 }
 
-bool MainWindow::download(podcast &cur_pod,
+void MainWindow::download(podcast &cur_pod,
                           QString episode_title,
                           std::string url,
                           std::string file_dest,
-                          [[maybe_unused]] int row) {
+                          [[maybe_unused]] int row,
+                          QModelIndex index) {
 
     //try {
         episode * ep = cur_pod.get_episode(episode_title);
@@ -131,15 +152,45 @@ bool MainWindow::download(podcast &cur_pod,
             throw std::invalid_argument("Can't find given episode title in the current podcast.");
 
         auto download_rights = ep->get_download_rights();
+        download_rights->set_index(index);
 
-        if(not std::get<1>(*download_rights).emplace(std::get<0>(*download_rights)))
-            return false;
+        auto maybe_lock = download_rights->try_lock();
 
-        auto cmpl = [](size_t, size_t) -> void {};
-        auto prog = [file_dest, this, pod_name=cur_pod.title(), rights=std::move(download_rights), &episode_title] (
+        if(not maybe_lock.has_value()) {
+            throw std::runtime_error("Could not acquire download_rights lock.");
+        }
+
+
+
+        auto * model = static_cast<QStandardItemModel*>(this->ui->episodeView->model());
+
+        auto gui_callback = [this, download_rights, podcast_title = cur_pod.title(), episode_title, ep, model](QModelIndex &index) mutable -> void {
+
+            if(index.isValid() and this->open_channel == podcast_title and ep->get_title() == episode_title ) {
+                model->setData(index, QVariant{}, Qt::DecorationRole);
+                ep->populate(index.row(), model, "");
+                this->request_update_at(index);
+            }
+
+        };
+
+        download_rights->adopt_lock(std::move(*maybe_lock));
+        download_rights->set_gui_callback(std::move(gui_callback));
+
+        // Since the completion handler holds ownership of the shared_state, we can just use a raw pointer here.
+        auto prog = [shared_state=download_rights.get()]([[maybe_unused]] size_t completed, [[maybe_unused]] size_t total) -> void {
+
+            shared_state->set_bytes_completed(completed);
+            shared_state->request_gui_update();
+        };
+
+        auto cmpl = [file_dest, this, pod_name=cur_pod.title(), rights=std::move(download_rights), &episode_title] (
                 boost::beast::error_code const &ec,
                 size_t bytes_read,
                 http_connection_resources &resources) mutable -> void {
+
+            rights->request_gui_update();
+            //rights->set_gui_callback(std::function<void(QModelIndex&)>());
 
             if(ec or bytes_read == 0) {
                 return;
@@ -151,7 +202,7 @@ bool MainWindow::download(podcast &cur_pod,
             output_file.close();
             std::cout << "wrote to file" << std::endl;
 
-            std::get<1>(*rights) = std::nullopt;
+            rights->clear_lock();
 
             auto r = this->channels.find(pod_name);
         if(r == this->channels.end() or r->first != this->open_channel) {
@@ -181,7 +232,8 @@ bool MainWindow::download(podcast &cur_pod,
         return;
     };
 
-    return this->get.async_download(url, std::move(cmpl), std::move(prog));
+    get.async_download(url, std::move(prog), std::move(cmpl));
+
 }
 
 void MainWindow::download_or_play(const QModelIndex &index) {
@@ -202,7 +254,7 @@ void MainWindow::download_or_play(const QModelIndex &index) {
     std::cout << file_name << std::endl;
 
     if(not QDir::root().mkpath(QString::fromStdString(project_directory + native_separator + open_channel)))
-        throw std::experimental::filesystem::filesystem_error("Could not create directory "s,
+        throw std::filesystem::filesystem_error("Could not create directory "s,
                                                               project_directory + native_separator + open_channel,
                                                               std::error_code());
 
@@ -229,7 +281,7 @@ void MainWindow::download_or_play(const QModelIndex &index) {
         }
     }
     else {
-        download(cur_pod, episode_title, *url, local_path, index.row());
+        download(cur_pod, episode_title, *url, local_path, index.row(), index);
 
         episode * ep = cur_pod.get_episode(episode_title);
         if(ep) {
@@ -250,14 +302,22 @@ void MainWindow::fetch_rss(std::string url) {
     try {
         auto [clean_url, rss_feed, lpos, len] = get.get_feed(url, 80);
 
-        std::cout << "Cleaned url is: " << clean_url << "\nRSS feed is length: " << rss_feed.length() << std::endl;
+        //std::cout << "Original URL is: " << url << "\nCleaned url is: " << clean_url << "\nRSS feed is length: " << rss_feed.length() << std::endl;
         url = clean_url;
 
         //boost::iostreams::stream<boost::iostreams::array_source> stream(xml_segment.begin(),xml_segment.size());
         //boost::property_tree::read_xml(stream, tree);
 
-        if(rss_feed.empty())
-            throw std::runtime_error("Unable to connect to URL");
+        if(rss_feed.empty()) {
+            auto feed_data = get.get_feed(url, 443);
+            clean_url = std::get<0>(feed_data);
+            rss_feed = std::get<1>(feed_data);
+            lpos = std::get<2>(feed_data);
+            len = std::get<3>(feed_data);
+
+            if(rss_feed.empty())
+                throw std::runtime_error("Unable to connect to URL");
+        }
         auto xml_segment = std::string_view(rss_feed).substr(lpos, len);
 
         doc.load_buffer(xml_segment.begin(), xml_segment.size());
@@ -345,15 +405,15 @@ void MainWindow::remove_local_file(const QModelIndex &index) {
     auto pos = url->find_last_of('/')+1;
     auto rpos = url->find_first_of('?');
     std::string file_name = url->substr(pos, rpos-pos);
-    std::experimental::filesystem::path file(project_directory + open_channel + native_separator + file_name);
+    std::filesystem::path file(project_directory + open_channel + native_separator + file_name);
     std::error_code ec;
-    std::experimental::filesystem::remove(file,ec);
+    std::filesystem::remove(file,ec);
 }
 
 void MainWindow::remove_local_files(std::string channel_name) {
-    std::experimental::filesystem::path dir(project_directory + channel_name + native_separator);
+    std::filesystem::path dir(project_directory + channel_name + native_separator);
     std::error_code ec;
-    std::experimental::filesystem::remove_all(dir, ec);
+    std::filesystem::remove_all(dir, ec);
 }
 
 void MainWindow::save_subscriptions() {
@@ -379,12 +439,14 @@ void MainWindow::save_subscriptions() {
 
         while(ch_itr != early_end) {
             auto &[url, channel] = *ch_itr;
+            (void)url;// Can't use [[maybe_unused]] attribute with structured bindings.
             save_file << "\"channel\" : {\n";
             channel.serialize_into(save_file);
             save_file << "},\n";
             ++ch_itr;
         }
         auto &[url, channel] = *ch_itr;
+        (void)url; // Can't use [[maybe_unused]] attribute with structured bindings.
         save_file << "\"channel\" : {\n";
         channel.serialize_into(save_file);
         save_file << "}\n";
@@ -420,11 +482,13 @@ void MainWindow::set_active_channel(const QModelIndex &index) {
     pod.populate(ui->episodeView, project_directory);
 }
 
-void MainWindow::set_seek_bar_position(float percent) {
+bool MainWindow::set_seek_bar_position(float percent) {
     std::unique_lock lock(seek_bar_lock, std::try_to_lock);
 
     if(lock.owns_lock())
         ui->seek_slider->setSliderPosition(static_cast<int>(percent * ui->seek_slider->maximum()));
+
+    return lock.owns_lock();
 }
 
 void MainWindow::sync_audio_with_library_state() {
@@ -477,12 +541,18 @@ void MainWindow::sync_ui_with_audio_state() {
 
     // Synchronizes UI seek bar with audio backend.
     auto [dur, time_pos] = _audio_handle.perform(
-            [](audio_wrapper &player){ return std::make_pair(player.estimate_duration(), player.get_percent_played()); }
+            [](audio_wrapper &player) { return std::make_pair(player.estimate_duration(), player.get_percent_played()); }
         );
 
-    set_seek_bar_position(time_pos);
-    ui->cur_time_label->setText(to_time(static_cast<int>(dur*time_pos)));
-    ui->duration_label->setText(to_time(dur));
+    if(not set_seek_bar_position(time_pos)) {
+        ui->cur_time_label->setText("~"+to_time(static_cast<int>(dur * ui->seek_slider->sliderPosition() / ui->seek_slider->maximum())));
+        ui->duration_label->setText(to_time(dur));
+    }
+    else {
+        ui->cur_time_label->setText("~"+to_time(static_cast<int>(dur*time_pos)));
+        ui->duration_label->setText(to_time(dur));
+
+    }
 
 
     // Synchronizes play/pause push button
@@ -498,12 +568,26 @@ void MainWindow::sync_ui_with_audio_state() {
     }
 }
 
+void MainWindow::sync_ui_with_download_state() {
+    auto kv_pair = channels.find(open_channel);
+    if(kv_pair == channels.end()) {
+        return;
+    }
+
+    auto &p = kv_pair->second;
+    //ui->episodeView->model()->removeRows(0, ui->episodeView->model()->rowCount());
+    p.populate_download_progress(ui->episodeView);
+
+    emit requestEpisodeViewUpdate();
+}
+
 void MainWindow::sync_ui_with_library_state() {
     ui->podcastView->model()->removeRows(0, ui->podcastView->model()->rowCount());
     ui->podcastView->model()->insertRows(0, static_cast<int>(channels.size()));
 
     int cur_row=0;
     for(auto &[title, channel] : channels) {
+        (void)channel;// Can't use [[maybe_unused]] attribute with structured bindings.
         QModelIndex index = ui->podcastView->model()->index(cur_row,0);
         ui->podcastView->model()->setData(index, QString::fromStdString(title), Qt::DisplayRole);
         ++cur_row;

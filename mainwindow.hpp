@@ -27,18 +27,23 @@ class MainWindow : public QMainWindow
 public:
     explicit MainWindow(audio_interface &audio_handle, QWidget *parent = nullptr);
 
+signals:
+    void request_update_at(QModelIndex);
+    void requestEpisodeViewUpdate();
+
 protected:
     void add_rss_from_dialog();
     void change_volume(int vol);
     void closeEvent(QCloseEvent *ev) override;
     void podcastViewContextMenu(QPoint p);
     void episodeViewContextMenu(QPoint p);
-    bool download(const QModelIndex &episode_index);
-    bool download(podcast &cur_pod,
-                                              QString episode_title,
-                                              std::string url,
-                                              std::string file_dest,
-                                              int row);
+    void download(const QModelIndex &episode_index);
+    void download(podcast &cur_pod,
+                  QString episode_title,
+                  std::string url,
+                  std::string file_dest,
+                  int row,
+                  QModelIndex index);
     void download_or_play(const QModelIndex &episode_index);
     void fetch_rss(std::string url);
     void load_subscriptions();
@@ -49,10 +54,11 @@ protected:
     void save_subscriptions();
     void seek();
     void set_active_channel(const QModelIndex &podcast_index);
-    void set_seek_bar_position(float percent);
+    bool set_seek_bar_position(float percent);
     void set_up_connections();
     void sync_audio_with_library_state();
     void sync_ui_with_audio_state();
+    void sync_ui_with_download_state();
     void sync_ui_with_library_state();
 
 
@@ -60,6 +66,7 @@ private:
     std::unique_ptr<Ui::MainWindow> ui;
     std::map<std::string, podcast> channels;
     std::mutex seek_bar_lock;
+    std::mutex daemon_lock;
     audio_interface &_audio_handle;
     UserDesiredState state;
     std::string open_channel;
@@ -69,6 +76,10 @@ private:
     getter get;
     std::thread daemon;
     std::atomic<int> volume;
+
+private:
+    static constexpr size_t maximum_allowed_bytes_between_updates = 100000;
+
 };
 
 #endif // MAINWINDOW_HPP

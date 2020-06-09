@@ -29,6 +29,6 @@ std::tuple<std::string,std::string,std::string,std::string> parse_url(std::strin
 
     std::cout << "Failed to parse.\n";
 
-    using std::string_literals::operator""s;
+    using namespace std::string_literals;
     return {""s,""s,""s,""s};
 }

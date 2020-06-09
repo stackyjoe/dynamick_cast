@@ -6,19 +6,14 @@
 #include "episode.hpp"
 #include "string_functions.hpp"
 
-episode::episode()
-    : download_lock (std::make_shared<std::tuple<std::mutex, std::optional<std::unique_lock<std::mutex> > >>()) {
-
-}
-
-episode::episode(boost::property_tree::ptree::iterator tree_node)
-    : download_lock { std::make_shared<std::tuple<std::mutex, std::optional<std::unique_lock<std::mutex> > >>() }
+episode::episode(size_t item_number, boost::property_tree::ptree::iterator tree_node)
+    : item_number_in_xml(item_number), shared_state { std::make_shared<download_shared_state>() }
 {
     fill(tree_node);
 }
 
-episode::episode(pugi::xml_node::iterator iterator)
-    : download_lock { std::make_shared<std::tuple<std::mutex, std::optional<std::unique_lock<std::mutex> > >>() }
+episode::episode(size_t item_number, pugi::xml_node::iterator iterator)
+    : item_number_in_xml(item_number), shared_state { std::make_shared<download_shared_state>() }
 {
     fill(iterator);
 }
@@ -31,6 +26,7 @@ void episode::fill(boost::property_tree::ptree::iterator tree_node) {
     auto end = tree_node->second.end();
 
     while(itr != end) {
+
         switch(hash(itr->first.data())) {
         case hash("title"):
             if (itr->first == "title")
@@ -144,44 +140,83 @@ const std::string &episode::url() const {
     return audio_url;
 }
 
-std::shared_ptr<std::tuple<std::mutex,std::optional<std::unique_lock<std::mutex>>>> episode::get_download_rights() {
-    return download_lock;
+std::shared_ptr<download_shared_state> episode::get_download_rights() {
+    return shared_state;
+}
+
+QString episode::get_title() const {
+    return title;
 }
 
 bool episode::has_title(const QString &text) const {
     return title == text;
 }
 
-void episode::populate(int i, QStandardItemModel *model, std::string directory) const {
-    if( QModelIndex index = model->index(i,0); index.isValid()) {
-        if(std::unique_lock lock(std::get<0>(*download_lock), std::try_to_lock); lock.owns_lock()) {
+void episode::populate(int row, QStandardItemModel *model, std::string directory) const {
+    QModelIndex index = model->index(row,0);
+
+    if(index.isValid()) {
+        auto maybe_lock = shared_state->try_lock();
+        if(maybe_lock.has_value()) {
             auto pos = audio_url.find_last_of('/')+1;
             auto rpos = audio_url.find_first_of('?');
             std::string file_name { audio_url.substr(pos, rpos-pos) };
-            if(std::fstream file{directory+file_name}; file.good()) {
+            std::fstream file{directory+file_name};
+            if(file.good()) {
 
-                //model->clearItemData(index);
                 auto item = model->itemFromIndex(index);
                 if(item != nullptr){
                     item->setData(QVariant(), Qt::UserRole);
                     item->setData(QVariant(), Qt::DecorationRole);
                     item->setData(QVariant(), Qt::DisplayRole);
                 }
-                model->setData(index, QIcon(":/icons/icons/check-square.svg").pixmap(QSize(16,16)), Qt::DecorationRole);
+                model->setData(index, QIcon(":/icons/icons/package.svg").pixmap(QSize(16,16)), Qt::DecorationRole);
+            }
+            else {
+                model->setData(index, QIcon(":/icons/icons/hexagon.svg").pixmap(QSize(16,16)), Qt::DecorationRole);
             }
         }
         else {
             // Someone must be downloading
-            //TODO(joe): implement UI updates based on download progress
 
-            //QString::fromUtf8("\xf0\x9f\x95\x97")
-            std::cout << "Still downloading " << title.toStdString() << "\n";
-            model->setData(index, QIcon(":/icons/icons/loader.svg").pixmap(QSize(16,16)), Qt::DecorationRole);
+
+            double percent = 100.0*shared_state->get_bytes_completed() / std::max(1.0,static_cast<double>(shared_state->get_bytes_total()));
+            model->setData(index, QVariant{}, Qt::DecorationRole);
+            model->setData(index,
+                           shared_state->get_bytes_total() > 0 ?
+                               QString::number(percent, 'f', 1) + QString::fromLocal8Bit("%",1) :
+                               QString::number(shared_state->get_bytes_completed()/1000000) + QString::fromLocal8Bit("MB",2),
+                           Qt::DisplayRole);
         }
     }
 
-    if( QModelIndex index = model->index(i,1); index.isValid() and not model->setData(index, title, Qt::DisplayRole))
+    index = model->index(row,1);
+
+    if(index.isValid() and not model->setData(index, QString::number(item_number_in_xml), Qt::DisplayRole) )
+        std::cout << "Failed to add item number." << std::endl;
+
+    index = model->index(row,2);
+
+    if(index.isValid() and not model->setData(index, title, Qt::DisplayRole))
             std::cout << "Failed to add " << title.toStdString() << " to episodeView." << std::endl;
+}
+
+void episode::populate_download_progress(int row, QStandardItemModel *model) const {
+    QModelIndex index = model->index(row,0);
+
+    if(index.isValid()) {
+        auto maybe_lock = shared_state->try_lock();
+        if(not maybe_lock.has_value()) {
+
+            double percent = 100.0*shared_state->get_bytes_completed() / std::max(1.0,static_cast<double>(shared_state->get_bytes_total()));
+
+            model->setData(index,
+                           shared_state->get_bytes_total() > 0 ?
+                               QString::number(percent, 'f', 1) + QString::fromLocal8Bit("%",1) :
+                               QString::number(shared_state->get_bytes_completed()/1000000) + QString::fromLocal8Bit("MB",2),
+                           Qt::DisplayRole);
+        }
+    }
 }
 
 void episode::serialize_into(std::ofstream &file) {

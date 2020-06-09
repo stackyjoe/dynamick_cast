@@ -22,7 +22,7 @@ DEFINES += QT_DEPRECATED_WARNINGS
 # You can also select to disable deprecated APIs only up to a certain version of Qt.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
-CONFIG += c++1z
+CONFIG += c++17
 
 SOURCES += \
         main.cpp \
@@ -33,7 +33,8 @@ SOURCES += \
     url_parser.cpp \
     string_functions.cpp \
     getter.cpp \
-    contrib/sfml_mp3/music_adapter.cpp
+    contrib/sfml_mp3/music_adapter.cpp \
+    download_shared_state.cpp
 
 HEADERS += \
         mainwindow.hpp \
@@ -47,7 +48,8 @@ HEADERS += \
     string_functions.hpp \
     getter.hpp \
     contrib/function2/function2.hpp \
-    contrib/sfml_mp3/music_adapter.hpp
+    contrib/sfml_mp3/music_adapter.hpp \
+    download_shared_state.hpp
 
 *-g++ {
     LIBS += -lstdc++fs
@@ -107,7 +109,7 @@ HEADERS += audio_backends/audiere_wrapper.hpp
 FORMS += \
         mainwindow.ui
 
-QMAKE_CXXFLAGS += -std=c++17 -Wall -Wextra -pedantic-errors -O0 -pg
+QMAKE_CXXFLAGS += -std=c++17 -Wall -Wextra -pedantic-errors -O1 -pg
 INCLUDEPATH += /usr/local/include
 
 # Default rules for deployment.

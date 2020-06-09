@@ -29,6 +29,7 @@ public:
     void fill_from_xml(pugi::xml_document &parsed_xml);
     episode * get_episode(const QString &title);
     void populate(QTableView* view, std::string project_directory);
+    void populate_download_progress(QTableView* view);
     void serialize_into(std::ofstream &file);
     const std::string & title();
     std::string rss_url();

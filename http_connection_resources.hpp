@@ -40,16 +40,22 @@ public:
 
     void set_ssl_stream(boost::asio::ip::tcp::socket& socket, boost::asio::ssl::context &&context);
 
-    size_t completed;
+    std::atomic<size_t> completed;
     size_t total;
+    size_t bytecount_when_progress_handler_was_last_called;
+
     boost::asio::ip::tcp::socket socket_;
     std::optional<boost::asio::ssl::context> ssl_context_;
     std::optional<boost::asio::ssl::stream<boost::asio::ip::tcp::socket&>> ssl_stream_;
     boost::beast::flat_buffer buffer_;
     boost::beast::http::response_parser<boost::beast::http::string_body> parser_;
-    //std::promise<bool> promise;
+
+    std::mutex progress_handler_lock;
     fu2::unique_function<void(size_t, size_t)> progress_handler_;
     fu2::unique_function<void(boost::beast::error_code const &, size_t, http_connection_resources &)> completion_handler_;
+
+    constexpr static size_t default_download_limit = 64000000;
+    constexpr static size_t bytes_between_updates = 1000000;
 };
 
 #endif // ACTIVE_DOWNLOAD_HPP

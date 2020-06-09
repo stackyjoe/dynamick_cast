@@ -1,13 +1,11 @@
 #include "http_connection_resources.hpp"
 
+#include <iostream>
+
 
 using tcp = boost::asio::ip::tcp;
 namespace http = boost::beast::http;
 namespace ssl = boost::asio::ssl;
-
-namespace {
-    constexpr size_t default_download_limit = 1024*1024*64;
-}
 
 http_connection_resources::http_connection_resources(tcp::socket &&socket,
                                                     size_t total
@@ -59,8 +57,15 @@ void http_connection_resources::read_some(boost::system::error_code const &ec,
         return;
     }
 
-    completed += bytes_read;
-    progress_handler_(completed, total);
+    completed = std::max(completed+0, completed+bytes_read);
+    size_t cmpl = completed;
+
+    if(std::unique_lock<std::mutex> l(progress_handler_lock, std::try_to_lock); l.owns_lock() and cmpl >= bytecount_when_progress_handler_was_last_called + bytes_between_updates) {
+
+        bytecount_when_progress_handler_was_last_called = std::max(bytecount_when_progress_handler_was_last_called+0, cmpl);
+
+        progress_handler_(cmpl, total);
+    }
 
     auto & skt = resources->socket_;
     auto & bfr = resources->buffer_;

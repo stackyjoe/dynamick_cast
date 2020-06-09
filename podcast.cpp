@@ -3,7 +3,7 @@
 #include "string_functions.hpp"
 #include "podcast.hpp"
 
-using std::string_literals::operator""s;
+using namespace std::string_literals;
 
 podcast::podcast(std::string url) : rss_feed_url(url) { }
 
@@ -59,18 +59,18 @@ void podcast::fill_from_xml(boost::property_tree::ptree &parsed_xml) {
 
     std::string podcast_title(itr->second.data());
 
-    size_t loops = 0;
+    size_t item_number = 0;
     while(itr != end) {
         if(itr->first == "item") {
             try {
-                items.emplace_back(episode(itr));
+                items.emplace_back(episode(item_number, itr));
             }
             catch(std::exception &e) {
-                item_errors.emplace_back(e.what());
+                std::cout << "An exception has occurred: " << e.what();
             }
         }
 
-        ++loops;
+        ++item_number;
         ++itr;
     }
 }
@@ -124,20 +124,18 @@ void podcast::fill_from_xml(pugi::xml_document &parsed_xml) {
     if(itr == end)
         throw std::invalid_argument("constructor of podcast class called with inappropriate xml argument.");
 
-    size_t loops = 0;
+    size_t item_number = 0;
     while(itr != end) {
         if(strcmp(itr->name(), "item")==0) {
             try {
-                //std::cout << itr->children().begin()->text().get() << std::endl;
-                items.emplace_back(episode(itr));
+                items.emplace_back(episode(item_number, itr));
             }
             catch(std::exception const &e) {
                 std::cout << "An exception occurred: " << e.what() << std::endl;
-                //item_errors.emplace_back(e.what());
             }
         }
 
-        ++loops;
+        ++item_number;
         ++itr;
     }
 
@@ -167,6 +165,15 @@ void podcast::populate(QTableView *tableview, std::string directory) {
 
     for(size_t i = 0; i < items.size(); ++i) {
         items[i].populate(static_cast<int>(i), model, directory + _title + "/"s);
+    }
+}
+
+void podcast::populate_download_progress(QTableView *tableview) {
+    // Brittle! Should verify that the size of the tableview is correct.
+    auto * model = static_cast<QStandardItemModel *>(tableview->model());
+
+    for(size_t i = 0; i < items.size(); ++i) {
+        items[i].populate_download_progress(static_cast<int>(i), model);
     }
 }
 

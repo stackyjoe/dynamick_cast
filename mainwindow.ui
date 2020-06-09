@@ -78,14 +78,14 @@
           <item>
            <widget class="QSlider" name="volume_slider">
             <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-              <horstretch>0</horstretch>
+             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+              <horstretch>1</horstretch>
               <verstretch>0</verstretch>
              </sizepolicy>
             </property>
             <property name="maximumSize">
              <size>
-              <width>16777215</width>
+              <width>95</width>
               <height>16777215</height>
              </size>
             </property>
@@ -135,6 +135,9 @@
              <iconset resource="resources.qrc">
               <normaloff>:/icons/icons/play.svg</normaloff>:/icons/icons/play.svg</iconset>
             </property>
+            <property name="shortcut">
+             <string>Space</string>
+            </property>
            </widget>
           </item>
           <item>
@@ -157,10 +160,16 @@
           <item>
            <widget class="QLabel" name="current_track_label">
             <property name="sizePolicy">
-             <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
+             <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
               <horstretch>10</horstretch>
               <verstretch>0</verstretch>
              </sizepolicy>
+            </property>
+            <property name="font">
+             <font>
+              <family>Latin Modern Roman</family>
+              <pointsize>10</pointsize>
+             </font>
             </property>
             <property name="frameShape">
              <enum>QFrame::NoFrame</enum>
@@ -312,7 +321,8 @@
             </property>
             <property name="font">
              <font>
-              <family>Noto Sans</family>
+              <family>Latin Modern Roman</family>
+              <pointsize>12</pointsize>
              </font>
             </property>
             <property name="contextMenuPolicy">
@@ -345,7 +355,8 @@
             </property>
             <property name="font">
              <font>
-              <family>Noto Sans</family>
+              <family>Latin Modern Roman</family>
+              <pointsize>12</pointsize>
              </font>
             </property>
             <property name="contextMenuPolicy">
@@ -359,6 +370,9 @@
             </property>
             <property name="selectionBehavior">
              <enum>QAbstractItemView::SelectRows</enum>
+            </property>
+            <property name="sortingEnabled">
+             <bool>true</bool>
             </property>
             <property name="wordWrap">
              <bool>false</bool>
@@ -394,13 +408,31 @@
      <height>24</height>
     </rect>
    </property>
+   <property name="font">
+    <font>
+     <family>Latin Modern Roman</family>
+     <pointsize>12</pointsize>
+    </font>
+   </property>
    <widget class="QMenu" name="menuProgram">
+    <property name="font">
+     <font>
+      <family>Latin Modern Roman</family>
+      <pointsize>12</pointsize>
+     </font>
+    </property>
     <property name="title">
      <string>Program</string>
     </property>
     <addaction name="actionQuit"/>
    </widget>
    <widget class="QMenu" name="menuPodcasts">
+    <property name="font">
+     <font>
+      <family>Latin Modern Roman</family>
+      <pointsize>12</pointsize>
+     </font>
+    </property>
     <property name="title">
      <string>Podcasts</string>
     </property>
@@ -423,6 +455,12 @@
   <action name="actionAdd_a_podcast">
    <property name="text">
     <string>Add a podcast</string>
+   </property>
+   <property name="font">
+    <font>
+     <family>Latin Modern Roman</family>
+     <pointsize>12</pointsize>
+    </font>
    </property>
    <property name="shortcut">
     <string>Ctrl+O</string>
@@ -447,6 +485,12 @@
   <action name="actionQuit">
    <property name="text">
     <string>Quit</string>
+   </property>
+   <property name="font">
+    <font>
+     <family>Latin Modern Roman</family>
+     <pointsize>12</pointsize>
+    </font>
    </property>
    <property name="shortcut">
     <string>Ctrl+Q</string>

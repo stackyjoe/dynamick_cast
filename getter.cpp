@@ -40,14 +40,19 @@ bool getter::async_download(std::string url,
                             fu2::unique_function<void(boost::beast::error_code const &, size_t, http_connection_resources &)> &&completion_handler) {
 
     auto [protocol, hostname, target, query_] = parse_url(url);
+    (void)hostname;
+    (void)target;
+    (void)query_;
 
     auto [total, real_path] = sync_get_header(url);
 
     if(real_path.empty())
-        throw std::logic_error("URL parse failed or inappropriate url passed to getter::async_download.");
+        throw std::logic_error("URL parse failed or inappropriate url passed to getter::async_download. Before parsing the URL was: " + url);
 
 
     auto [prot, host, path, query] = parse_url(real_path);
+
+    (void)prot;
 
     std::string port;
 
@@ -76,17 +81,23 @@ bool getter::async_download(std::string url,
     //auto result = network_resources->promise.get_future();
 
     if(protocol == "https") {
-        ssl::context ctx{ ssl::context::tlsv12};
-        ctx.set_options(ssl::context_base::default_workarounds |
-                        ssl::context_base::no_sslv3);
-        ctx.set_default_verify_paths();
+        try {
+            ssl::context ctx{ ssl::context::tlsv12};
+            ctx.set_options(ssl::context_base::default_workarounds |
+                            ssl::context_base::no_sslv3);
+            ctx.set_default_verify_paths();
 
-        network_resources->set_ssl_stream(network_resources->socket_, std::move(ctx));
-        network_resources->ssl_stream_->set_verify_mode(ssl::verify_peer);
+            network_resources->set_ssl_stream(network_resources->socket_, std::move(ctx));
+            network_resources->ssl_stream_->set_verify_mode(ssl::verify_peer);
 
-        network_resources->ssl_stream_->handshake(ssl::stream_base::client);
+            network_resources->ssl_stream_->handshake(ssl::stream_base::client);
 
         //std::cout << "ssl handshake completed." << std::endl;
+        }
+        catch(std::runtime_error const &e) {
+            std::cout << "An exception occurred: " << e.what();
+            return false;
+        }
     }
 
     http::request<http::string_body> req {http::verb::get, path+query, 11};
@@ -135,7 +146,7 @@ std::tuple<size_t, std::string> getter::sync_get_header(std::string url) {
     auto network_resources = std::make_unique<http_connection_resources>(std::move(socket), std::move(parser));
 
     if(port == "443") {
-        ssl::context ctx{ ssl::context::tlsv11 };
+        ssl::context ctx{ ssl::context::sslv23 };
         ctx.set_options(ssl::context_base::default_workarounds);
         ctx.set_default_verify_paths();
 
@@ -210,26 +221,70 @@ std::tuple<size_t, std::string> getter::sync_get_header(std::string url) {
 
 std::tuple<std::string, std::string, size_t, size_t> getter::get_feed(std::string url, int port) {
     auto [protocol, hostname, pathname, query ] = parse_url(url);
-
+    (void)protocol;
 
     auto const results = resolver.resolve(hostname.c_str(),
                                           std::to_string(port),
                                           boost::asio::ip::resolver_query_base::numeric_service);
 
-    auto socket = std::make_unique<tcp::socket>(ioc);
-    boost::asio::connect(*socket, results.begin(), results.end());
+    //auto socket = std::make_unique<tcp::socket>(ioc);
+    //boost::asio::connect(*socket, results.begin(), results.end());
+
+
+
+
+    //tcp::socket socket { ioc };
+
+    boost::beast::flat_buffer buffer;
+    boost::beast::http::response_parser<boost::beast::http::empty_body> parser;
+    auto network_resources = std::make_unique<http_connection_resources>(tcp::socket(ioc), std::move(parser));
+    boost::asio::connect(network_resources->socket_, results.begin(), results.end());
+
+
+    if(port == 443) {
+        ssl::context ctx{ ssl::context::sslv23 };
+        ctx.set_options(ssl::context_base::default_workarounds);
+        ctx.set_default_verify_paths();
+
+        network_resources->set_ssl_stream(network_resources->socket_, std::move(ctx));
+        network_resources->ssl_stream_->set_verify_mode(ssl::verify_none);
+
+        // Fixes issues with CDN's such as Cloudflare, see issue #262 here:
+        // https://github.com/chriskohlhoff/asio/issues/262
+        SSL_set_tlsext_host_name( network_resources->ssl_stream_->native_handle(), hostname.c_str() );
+
+        try {
+            network_resources->ssl_stream_->handshake(ssl::stream_base::client);
+        }
+        catch(boost::system::system_error const &e) {
+            throw e;
+        }
+
+    }
+
 
     http::request<http::string_body> req {http::verb::get, pathname+query, 11 };
     req.set(http::field::host, hostname.c_str());
     req.set(http::field::user_agent, BOOST_BEAST_VERSION_STRING);
+    std::string full_response;
 
-    http::write(*socket, req);
+    if(!network_resources->ssl_stream_.has_value()) {
+        http::write(network_resources->socket_, req);
 
-    boost::beast::flat_buffer buffer;
-    http::response<http::dynamic_body> response;
+        //boost::beast::flat_buffer buffer;
+        http::response<http::dynamic_body> response;
 
-    http::read(*socket, buffer, response);
-    std::string full_response = boost::beast::buffers_to_string(response.body().data());
+        http::read(network_resources->socket_, buffer, response);
+        full_response = boost::beast::buffers_to_string(response.body().data());
+    }
+    else {
+        http::write( network_resources->ssl_stream_.value(), req);
+        http::response<http::dynamic_body> response;
+        http::read(network_resources->ssl_stream_.value(), buffer, response);
+        full_response = boost::beast::buffers_to_string(response.body().data());
+    }
+
+    //std::cout << full_response << std::endl;
 
     // Want to trim off unneeded text with a minimal amount of moving data. Testing with a toy
     // RSS feed with approximately 950000 bytes. The copies add up!

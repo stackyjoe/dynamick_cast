@@ -8,7 +8,7 @@
 
 audio_wrapper::~audio_wrapper() = default;
 
-using std::string_literals::operator""s;
+using namespace std::string_literals;
 
 sfml_wrapper::sfml_wrapper()
     : supported_formats(

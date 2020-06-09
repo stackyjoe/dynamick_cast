@@ -6,5 +6,7 @@
         <file>icons/skip-forward.svg</file>
         <file>icons/loader.svg</file>
         <file>icons/check-square.svg</file>
+        <file>icons/package.svg</file>
+        <file>icons/hexagon.svg</file>
     </qresource>
 </RCC>
