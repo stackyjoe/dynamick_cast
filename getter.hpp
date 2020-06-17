@@ -47,6 +47,9 @@ protected:
     boost::asio::ip::tcp::resolver resolver;
     boost::asio::executor_work_guard<boost::asio::io_context::executor_type> guard;
     std::thread run_thread;
+
+    void ssl_handshake(http_connection_resources *network_resources, std::string hostname);
+
 };
 
 #endif // GETTER_HPP

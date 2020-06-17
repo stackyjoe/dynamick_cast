@@ -38,17 +38,6 @@ MainWindow::MainWindow(audio_interface &audio_handle, QWidget *parent) :
                     this->sync_audio_with_library_state();
 
                     this->sync_ui_with_audio_state();
-
-                    /*
-                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
-                    this->sync_audio_with_library_state();
-
-                    this ->sync_ui_with_audio_state();
-
-                    (std::chrono::milliseconds(100));
-
-                    this->sync_ui_with_download_state();*/
                 }
             }
         }),
@@ -116,7 +105,10 @@ void MainWindow::download(const QModelIndex &index) {
         return;
     }
 
-    QString episode_title = index.data(Qt::DisplayRole).toString();
+    auto * model = static_cast<QStandardItemModel*>(this->ui->episodeView->model());
+    auto index_holding_data = model->index(index.row(), 2);
+
+    QString episode_title = index_holding_data.data(Qt::DisplayRole).toString();
     podcast & cur_pod = itr->second;
     std::string const * url = cur_pod.find_url(episode_title);
 
@@ -135,7 +127,12 @@ void MainWindow::download(const QModelIndex &index) {
 
     std::string local_path = project_directory + open_channel + native_separator + file_name;
 
-    download(cur_pod, episode_title, *url, local_path, index.row(), index);
+    try {
+        download(cur_pod, episode_title, *url, local_path, index.row(), index);
+    }
+    catch(std::exception const &e) {
+        std::cout << "An exception occurred: " << e.what() << std::endl;
+    }
 }
 
 void MainWindow::download(podcast &cur_pod,
@@ -281,7 +278,13 @@ void MainWindow::download_or_play(const QModelIndex &index) {
         }
     }
     else {
-        download(cur_pod, episode_title, *url, local_path, index.row(), index);
+        try {
+            download(cur_pod, episode_title, *url, local_path, index.row(), index);
+        }
+        catch(std::exception const &e) {
+            std::cout << e.what() << std::endl;
+            return;
+        }
 
         episode * ep = cur_pod.get_episode(episode_title);
         if(ep) {

@@ -77,22 +77,9 @@ bool getter::async_download(std::string url,
     auto & prs = network_resources->parser_;
     auto & strm = network_resources->ssl_stream_;
 
-
-    //auto result = network_resources->promise.get_future();
-
     if(protocol == "https") {
         try {
-            ssl::context ctx{ ssl::context::tlsv12};
-            ctx.set_options(ssl::context_base::default_workarounds |
-                            ssl::context_base::no_sslv3);
-            ctx.set_default_verify_paths();
-
-            network_resources->set_ssl_stream(network_resources->socket_, std::move(ctx));
-            network_resources->ssl_stream_->set_verify_mode(ssl::verify_peer);
-
-            network_resources->ssl_stream_->handshake(ssl::stream_base::client);
-
-        //std::cout << "ssl handshake completed." << std::endl;
+            ssl_handshake(network_resources.get(), hostname);
         }
         catch(std::runtime_error const &e) {
             std::cout << "An exception occurred: " << e.what();
@@ -145,26 +132,8 @@ std::tuple<size_t, std::string> getter::sync_get_header(std::string url) {
     boost::beast::http::response_parser<boost::beast::http::empty_body> parser;
     auto network_resources = std::make_unique<http_connection_resources>(std::move(socket), std::move(parser));
 
-    if(port == "443") {
-        ssl::context ctx{ ssl::context::sslv23 };
-        ctx.set_options(ssl::context_base::default_workarounds);
-        ctx.set_default_verify_paths();
-
-        network_resources->set_ssl_stream(network_resources->socket_, std::move(ctx));
-        network_resources->ssl_stream_->set_verify_mode(ssl::verify_none);
-
-        // Fixes issues with CDN's such as Cloudflare, see issue #262 here:
-        // https://github.com/chriskohlhoff/asio/issues/262
-        SSL_set_tlsext_host_name( network_resources->ssl_stream_->native_handle(), hostname.c_str() );
-
-        try {
-            network_resources->ssl_stream_->handshake(ssl::stream_base::client);
-        }
-        catch(boost::system::system_error const &e) {
-            throw e;
-        }
-
-    }
+    if(port == "443")
+        ssl_handshake(network_resources.get(), hostname);
 
     http::request<http::string_body> hdr_req {http::verb::head, target+query, 11};
     hdr_req.set(http::field::host, hostname.c_str());
@@ -221,19 +190,10 @@ std::tuple<size_t, std::string> getter::sync_get_header(std::string url) {
 
 std::tuple<std::string, std::string, size_t, size_t> getter::get_feed(std::string url, int port) {
     auto [protocol, hostname, pathname, query ] = parse_url(url);
-    (void)protocol;
 
     auto const results = resolver.resolve(hostname.c_str(),
                                           std::to_string(port),
                                           boost::asio::ip::resolver_query_base::numeric_service);
-
-    //auto socket = std::make_unique<tcp::socket>(ioc);
-    //boost::asio::connect(*socket, results.begin(), results.end());
-
-
-
-
-    //tcp::socket socket { ioc };
 
     boost::beast::flat_buffer buffer;
     boost::beast::http::response_parser<boost::beast::http::empty_body> parser;
@@ -241,26 +201,8 @@ std::tuple<std::string, std::string, size_t, size_t> getter::get_feed(std::strin
     boost::asio::connect(network_resources->socket_, results.begin(), results.end());
 
 
-    if(port == 443) {
-        ssl::context ctx{ ssl::context::sslv23 };
-        ctx.set_options(ssl::context_base::default_workarounds);
-        ctx.set_default_verify_paths();
-
-        network_resources->set_ssl_stream(network_resources->socket_, std::move(ctx));
-        network_resources->ssl_stream_->set_verify_mode(ssl::verify_none);
-
-        // Fixes issues with CDN's such as Cloudflare, see issue #262 here:
-        // https://github.com/chriskohlhoff/asio/issues/262
-        SSL_set_tlsext_host_name( network_resources->ssl_stream_->native_handle(), hostname.c_str() );
-
-        try {
-            network_resources->ssl_stream_->handshake(ssl::stream_base::client);
-        }
-        catch(boost::system::system_error const &e) {
-            throw e;
-        }
-
-    }
+    if(port == 443)
+        ssl_handshake(network_resources.get(), hostname);
 
 
     http::request<http::string_body> req {http::verb::get, pathname+query, 11 };
@@ -284,7 +226,6 @@ std::tuple<std::string, std::string, size_t, size_t> getter::get_feed(std::strin
         full_response = boost::beast::buffers_to_string(response.body().data());
     }
 
-    //std::cout << full_response << std::endl;
 
     // Want to trim off unneeded text with a minimal amount of moving data. Testing with a toy
     // RSS feed with approximately 950000 bytes. The copies add up!
@@ -303,3 +244,18 @@ std::tuple<std::string, std::string, size_t, size_t> getter::get_feed(std::strin
     return {hostname+pathname, full_response, lpos, rpos-lpos};
 }
 
+void getter::ssl_handshake(http_connection_resources *network_resources, std::string hostname) {
+    ssl::context ctx{ ssl::context::sslv23 };
+    ctx.set_options(ssl::context_base::default_workarounds);
+    ctx.set_default_verify_paths();
+
+    network_resources->set_ssl_stream(network_resources->socket_, std::move(ctx));
+    network_resources->ssl_stream_->set_verify_mode(ssl::verify_none);
+
+    // Fixes issues with CDN's such as Cloudflare, see issue #262 here:
+    // https://github.com/chriskohlhoff/asio/issues/262
+    SSL_set_tlsext_host_name( network_resources->ssl_stream_->native_handle(), hostname.c_str() );
+
+
+    network_resources->ssl_stream_->handshake(ssl::stream_base::client);
+}
