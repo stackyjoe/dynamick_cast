@@ -22,7 +22,7 @@ DEFINES += QT_DEPRECATED_WARNINGS
 # You can also select to disable deprecated APIs only up to a certain version of Qt.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
-CONFIG += c++17
+CONFIG += c++2a
 
 SOURCES += \
         main.cpp \
@@ -56,7 +56,7 @@ HEADERS += \
 }
 
 *-clang++ {
-    LIBS += -lc++experimental
+    LIBS += -lc++fs
 }
 
 DEFINES += USE_SFML
@@ -109,7 +109,7 @@ HEADERS += audio_backends/audiere_wrapper.hpp
 FORMS += \
         mainwindow.ui
 
-QMAKE_CXXFLAGS += -std=c++17 -Wall -Wextra -pedantic-errors -O1 -pg
+QMAKE_CXXFLAGS += -Wall -Wextra -pedantic-errors -Og -pg -fmodules-ts
 INCLUDEPATH += /usr/local/include
 
 # Default rules for deployment.

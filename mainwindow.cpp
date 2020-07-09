@@ -626,23 +626,30 @@ void MainWindow::podcastViewContextMenu(QPoint p) {
 
         menu.addAction(QString("Fetch RSS"),
                        [this, url=itr->second.rss_url()](){
-                            this->fetch_rss(url);
+                            std::thread t([this, url](){this->fetch_rss(url);});
+                            t.detach();
                         }
         );
 
         menu.addAction(QString("Remove podcast"),
                        [this, itr, row=index.row()](){
-                            std::string channel_name = itr->first;
-                            this->channels.erase(itr);
-                            this->ui->podcastView->model()->removeRow(row);
-                            this->remove_local_files(channel_name);
+                            std::thread t([this, itr, row](){
+                                std::string channel_name = itr->first;
+                                this->channels.erase(itr);
+                                this->ui->podcastView->model()->removeRow(row);
+                                this->remove_local_files(channel_name);
+                            });
+                            t.detach();
                         }
         );
 
         menu.addAction(QString("Remove local files"),
                        [this, itr](){
-                            std::string channel_name = itr->first;
-                            this->remove_local_files(channel_name);
+                            std::thread t([this, itr](){
+                                std::string channel_name = itr->first;
+                                this->remove_local_files(channel_name);
+                            });
+                            t.detach();
                         }
         );
 
@@ -654,7 +661,7 @@ void MainWindow::episodeViewContextMenu(QPoint p) {
     if(QModelIndex index = ui->episodeView->indexAt(p); index.isValid()) {
         QMenu menu { ui->episodeView->indexWidget(index) };
 
-        menu.addAction(QString("Download"), [this, &index](){this->download(index);});
+        menu.addAction(QString("Download"), [this, &index](){std::thread t([this, &index](){this->download(index);}); t.detach();});
         menu.addAction(QString("Delete file"), [this, &index](){this->remove_local_file(index);});
         menu.addAction(QString("Play"), [this, &index](){this->download_or_play(index);});
         menu.exec(ui->episodeView->mapToGlobal(p));
