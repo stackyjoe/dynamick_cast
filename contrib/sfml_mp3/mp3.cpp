@@ -9,7 +9,7 @@ extern "C" {
 #include <string.h>
 }
 
-#include "contrib/sfml_mp3/mp3.hpp"
+#include "mp3.hpp"
 
 namespace {
     constexpr std::byte zero_byte{0x00};

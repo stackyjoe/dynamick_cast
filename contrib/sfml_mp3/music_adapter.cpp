@@ -19,7 +19,7 @@ sf::Time music_adapter::getDuration() const{
     case player::mp3:
         return mp3_handler.getDuration();
     }
-#elif
+#else
     return generic_handler.getDuration();
 #endif
     return sf::Time();
@@ -35,7 +35,7 @@ sf::Time music_adapter::getPlayingOffset() const {
     case player::mp3:
         return mp3_handler.getPlayingOffset();
     }
-#elif
+#else
     return generic_handler.getPlayingOffset();
 #endif
     return sf::Time();
@@ -51,7 +51,7 @@ sf::Music::Status music_adapter::getStatus() const {
     case player::mp3:
         return mp3_handler.getStatus();
     }
-#elif
+#else
     return generic_handler.getStatus();
 #endif
     return sf::Music::Status::Stopped;
@@ -86,7 +86,7 @@ bool music_adapter::openFromFile(std::string const &filename) {
         state = player::generic;
         generic_handler.openFromFile(filename);
     }
-#elif
+#else
     return generic_handler.openFromFile(filename);
 #endif
     return false;
@@ -104,7 +104,7 @@ void music_adapter::setPlayingOffset(sf::Time offset) {
         mp3_handler.setPlayingOffset(offset);
         return;
     }
-#elif
+#else
     generic_handler.setPlayingOffset(offset);
 #endif
 }
@@ -121,7 +121,7 @@ void music_adapter::setVolume(float volume) {
         mp3_handler.setVolume(volume);
         return;
     }
-#elif
+#else
     generic_handler.setVolume(volume);
 #endif
 }
@@ -138,7 +138,7 @@ void music_adapter::play() {
         mp3_handler.play();
         return;
     }
-#elif
+#else
     return generic_handler.play();
 #endif
 }
@@ -155,7 +155,7 @@ void music_adapter::pause() {
         mp3_handler.pause();
         return;
     }
-#elif
+#else
     return generic_handler.pause();
 #endif
 }
@@ -174,7 +174,7 @@ void music_adapter::stop() {
         state = player::neither;
         return;
     }
-#elif
+#else
     return generic_handler.stop();
 #endif
 }

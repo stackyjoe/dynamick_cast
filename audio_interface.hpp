@@ -14,7 +14,7 @@
 /// through the "perform" or "try_perform" template function, which enforces
 /// proper mutex safety.
 class  audio_interface {
-protected:
+private:
     std::unique_ptr<audio_wrapper> implementation;
 
     template<class audio_implementation>

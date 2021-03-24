@@ -4,7 +4,7 @@
 #include <SFML/Audio.hpp>
 
 #ifdef USE_SFML_MP3_EXPERIMENTAL
-#include "contrib/sfml_mp3/mp3.hpp"
+#include "mp3.hpp"
 #endif
 
 class music_adapter
@@ -29,7 +29,7 @@ public:
     void pause();
     void stop();
 
-protected:
+private:
     sf::Music generic_handler;
 #ifdef USE_SFML_MP3_EXPERIMENTAL
     contrib::Mp3 mp3_handler;

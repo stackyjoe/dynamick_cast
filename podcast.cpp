@@ -28,19 +28,19 @@ void podcast::fill_from_xml(boost::property_tree::ptree &parsed_xml) {
             break;
         case hash("author"):
             if(itr->first == "author")
-                _author = QString::fromStdString(itr->second.data());
+                _author = itr->second.data();
             break;
         case hash("lastBuildDate"):
             if(itr->first == "lastBuildDate")
-                _last_build_date = QString::fromStdString(itr->second.data());
+                _last_build_date = itr->second.data();
             break;
         case hash("managingEditor"):
             if(itr->first == "managingEditor")
-                _managing_editor = QString::fromStdString(itr->second.data());
+                _managing_editor = itr->second.data();
             break;
         case hash("itunes:summary"):
             if(itr->first == "itunes:summary")
-                _summary = QString::fromStdString(itr->second.data());
+                _summary = itr->second.data();
             break;
         case hash("item"):
             if(itr->first == "item")
@@ -84,7 +84,6 @@ void podcast::fill_from_xml(pugi::xml_document &parsed_xml) {
         switch(hash(itr->name())) {
         case hash("rss_feed_url"):
             if(strcmp(itr->name(), "rss_feed_url") == 0)
-
                 //itr->name();
                 rss_feed_url = itr->text().get();
             break;
@@ -94,19 +93,19 @@ void podcast::fill_from_xml(pugi::xml_document &parsed_xml) {
             break;
         case hash("author"):
             if(strcmp(itr->name(), "author")==0)
-                _author = QString::fromStdString(itr->text().get());
+                _author = itr->text().get();
             break;
         case hash("lastBuildDate"):
             if(strcmp(itr->name(), "lastBuildDate")==0)
-                _last_build_date = QString::fromStdString(itr->text().get());
+                _last_build_date = itr->text().get();
             break;
         case hash("managingEditor"):
             if(strcmp(itr->name(), "managingEditor")==0)
-                _managing_editor = QString::fromStdString(itr->text().get());
+                _managing_editor = itr->text().get();
             break;
         case hash("itunes:summary"):
             if(strcmp(itr->name(), "itunes:summary")==0)
-                _summary = QString::fromStdString(itr->text().get());
+                _summary = itr->text().get();
             break;
         case hash("item"):
             if(strcmp(itr->name(), "item")==0)
@@ -118,6 +117,7 @@ void podcast::fill_from_xml(pugi::xml_document &parsed_xml) {
     ++itr;
     }
 
+    // Jump label
     parse_items:
     ;
 
@@ -141,7 +141,7 @@ void podcast::fill_from_xml(pugi::xml_document &parsed_xml) {
 
 }
 
-std::string const * podcast::find_url(const QString &title) {
+std::string const * podcast::find_url(const std::string &title) {
     auto results = std::find_if(items.cbegin(), items.cend(), [&title](const episode &ep){ return ep.has_title(title);});
     if(results == items.end())
         return nullptr;
@@ -149,7 +149,7 @@ std::string const * podcast::find_url(const QString &title) {
     return &(results->url());
 }
 
-episode * podcast::get_episode(const QString &title) {
+episode * podcast::get_episode(const std::string &title) {
     auto results = std::find_if(items.begin(), items.end(), [&title](const episode &ep){ return ep.has_title(title);});
     if(results == items.end())
         return nullptr;
@@ -179,13 +179,13 @@ void podcast::populate_download_progress(QTableView *tableview) {
 
 void podcast::serialize_into(std::ofstream &file) {
     file << "\"" << rss_feed_url << "\" : {\n";
-    file << "\"author\": \"" << _author.toStdString() << "\",\n";
-    file << "\"lastBuildDate\": \"" << _last_build_date.toStdString() << "\",\n";
-    file << "\"managingEditor\": \"" << _managing_editor.toStdString() << "\",\n";
+    file << "\"author\": \"" << _author << "\",\n";
+    file << "\"lastBuildDate\": \"" << _last_build_date << "\",\n";
+    file << "\"managingEditor\": \"" << _managing_editor << "\",\n";
     // TODO(joe): sanitize summary field.
     file << "\"summary\": \"" << " "/*_summary.toStdString()*/ << "\",\n";
     file << "\"title\": \"" << sanitize(_title) << "\",\n";
-    file << "\"guid\": \"" << _guid.toStdString() << "\",\n";
+    file << "\"guid\": \"" << _guid << "\",\n";
     file << "\"rss_feed_url\": \"" << rss_feed_url << "\",\n";
 
     if(items.empty()) {

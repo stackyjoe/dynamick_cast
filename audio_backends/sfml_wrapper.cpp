@@ -1,7 +1,7 @@
-#include "audio_backends/sfml_wrapper.hpp"
+#include "sfml_wrapper.hpp"
 
-#if USE_SFML_MP3_EXPERIMENTAL
-#include "contrib/sfml_mp3/mp3.hpp"
+#ifdef USE_SFML_MP3_EXPERIMENTAL
+#include "../contrib/sfml_mp3/mp3.hpp"
 #endif
 
 #include <iostream>

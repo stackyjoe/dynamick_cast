@@ -1,10 +1,6 @@
 #include "string_functions.hpp"
 
-unsigned int hash(std::string const &s, int off) {
-    return hash(s.c_str(), off);
-}
-
-std::string sanitize(std::string const &raw) {
+std::string sanitize(std::string raw) {
     std::string clean;
     clean.reserve(raw.size()*2);
     for(auto ch : raw) {
@@ -21,7 +17,7 @@ std::string sanitize(std::string const &raw) {
     return clean;
 }
 
-QString to_time(int seconds) {
+std::string to_time(int seconds) {
     int sec, min, hours;
     sec = seconds % 60;
     seconds /= 60;
@@ -29,9 +25,9 @@ QString to_time(int seconds) {
     seconds /= 60;
     hours = seconds;
 
-    QString s = sec >= 10 ? QString::number(sec) : "0"+QString::number(sec);
-    QString m = min >= 10 ? QString::number(min) : "0"+QString::number(min);
-    QString h = QString::number(hours);
+    std::string s = sec >= 10 ? std::to_string(sec) : "0"+std::to_string(sec);
+    std::string m = min >= 10 ? std::to_string(min) : "0"+std::to_string(min);
+    std::string h = std::to_string(hours);
 
     return h + ":" + m + ":" + s;
 }

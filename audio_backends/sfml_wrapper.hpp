@@ -3,9 +3,9 @@
 
 #include <SFML/Audio.hpp>
 
-#include "contrib/sfml_mp3/music_adapter.hpp"
+#include "../contrib/sfml_mp3/music_adapter.hpp"
 
-#include "audio_interface.hpp"
+#include "../audio_interface.hpp"
 
 class sfml_wrapper : public audio_wrapper
 {
@@ -16,8 +16,8 @@ public:
     sfml_wrapper(const sfml_wrapper &other) = delete;
     sfml_wrapper &operator=(const sfml_wrapper &other) = delete;
 
-    sfml_wrapper(sfml_wrapper &&other) = default;
-    sfml_wrapper &operator=(sfml_wrapper &&other) = default;
+    sfml_wrapper(sfml_wrapper &&other) = delete;
+    sfml_wrapper &operator=(sfml_wrapper &&other) = delete;
 
     int estimate_duration() const noexcept override;
     float get_percent_played() const noexcept override;

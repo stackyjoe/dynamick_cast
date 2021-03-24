@@ -30,11 +30,11 @@ void episode::fill(boost::property_tree::ptree::iterator tree_node) {
         switch(hash(itr->first.data())) {
         case hash("title"):
             if (itr->first == "title")
-                title = QString::fromStdString(itr->second.data());
+                title = itr->second.data();
             break;
         case hash("subtitle"):
             if (itr->first == "subtitle")
-                subtitle = QString::fromStdString(itr->second.data());
+                subtitle = itr->second.data();
             break;
         case hash("link"):
             if (itr->first == "link")
@@ -42,11 +42,11 @@ void episode::fill(boost::property_tree::ptree::iterator tree_node) {
             break;
         case hash("description"):
             if (itr->first == "description")
-                description = QString::fromStdString(itr->second.data());
+                description = itr->second.data();
             break;
         case hash("guid"):
             if (itr->first == "guid")
-                guid = QString::fromStdString(itr->second.data());
+                guid = itr->second.data();
             break;
         case hash("enclosure"): {
             if (itr->first != "enclosure")
@@ -72,7 +72,7 @@ void episode::fill(boost::property_tree::ptree::iterator tree_node) {
         } break;
         case hash("pubDate"):
             if (itr->first == "pubDate")
-                publication_date = QString::fromStdString(itr->second.data());
+                publication_date = itr->second.data();
             break;
         default:
             break;
@@ -90,11 +90,11 @@ void episode::fill(pugi::xml_node::iterator iterator) {
         switch(hash(itr->name())) {
         case hash("title"):
             if (strcmp(itr->name(), "title")==0)
-                title = QString::fromStdString(itr->text().get());
+                title = itr->text().get();
             break;
         case hash("subtitle"):
             if (strcmp(itr->name(), "subtitle")==0)
-                subtitle = QString::fromStdString(itr->text().get());
+                subtitle = itr->text().get();
             break;
         case hash("link"):
             if (strcmp(itr->name(), "link")==0)
@@ -102,11 +102,11 @@ void episode::fill(pugi::xml_node::iterator iterator) {
             break;
         case hash("description"):
             if (strcmp(itr->name(), "description")==0)
-                description = QString::fromStdString(itr->text().get());
+                description = itr->text().get();
             break;
         case hash("guid"):
             if (strcmp(itr->name(), "guid")==0)
-                guid = QString::fromStdString(itr->text().get());
+                guid = itr->text().get();
             break;
         case hash("enclosure"): {
             if (strcmp(itr->name(), "enclosure") != 0)
@@ -126,7 +126,7 @@ void episode::fill(pugi::xml_node::iterator iterator) {
         } break;
         case hash("pubDate"):
             if (strcmp(itr->name(), "pubDate")==0)
-                publication_date = QString::fromStdString(itr->text().get());
+                publication_date = itr->text().get();
             break;
         default:
             break;
@@ -144,11 +144,11 @@ std::shared_ptr<download_shared_state> episode::get_download_rights() {
     return shared_state;
 }
 
-QString episode::get_title() const {
+std::string episode::get_title() const {
     return title;
 }
 
-bool episode::has_title(const QString &text) const {
+bool episode::has_title(const std::string &text) const {
     return title == text;
 }
 
@@ -197,8 +197,8 @@ void episode::populate(int row, QStandardItemModel *model, std::string directory
 
     index = model->index(row,2);
 
-    if(index.isValid() and not model->setData(index, title, Qt::DisplayRole))
-            std::cout << "Failed to add " << title.toStdString() << " to episodeView." << std::endl;
+    if(index.isValid() and not model->setData(index, QString::fromStdString(title), Qt::DisplayRole))
+            std::cout << "Failed to add " << title << " to episodeView." << std::endl;
 }
 
 void episode::populate_download_progress(int row, QStandardItemModel *model) const {
@@ -225,11 +225,11 @@ void episode::serialize_into(std::ofstream &file) {
     // TODO: add description, but it needs to be sanitized, since many podcasts embed XML in their description
     // fields.
     file << "\t\"description\": \"" << " " /*description.toStdString()*/ << "\",\n";
-    file << "\t\"guid\": \"" << guid.toStdString() << "\",\n";
+    file << "\t\"guid\": \"" << guid << "\",\n";
     file << "\t\"link\": \"" << page_url << "\",\n";
-    file << "\t\"pubDate\": \"" << publication_date.toStdString() << "\",\n";
-    file << "\t\"subtitle\": \"" << subtitle.toStdString() << "\",\n";
-    file << "\t\"title\": \"" << sanitize(title.toStdString()) << "\"\n";
+    file << "\t\"pubDate\": \"" << publication_date << "\",\n";
+    file << "\t\"subtitle\": \"" << subtitle << "\",\n";
+    file << "\t\"title\": \"" << sanitize(title) << "\"\n";
     file << "}";
     // Outputting ",\n" is responsibility of podcast, sadly.
 }

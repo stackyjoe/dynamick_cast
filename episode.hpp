@@ -23,14 +23,14 @@ public:
 
     const std::string &url() const;
     std::shared_ptr<download_shared_state> get_download_rights();
-    QString get_title() const;
-    bool has_title(const QString &text) const;
+    std::string get_title() const;
+    bool has_title(const std::string &text) const;
     void populate(int row, QStandardItemModel *model, std::string directory) const;
     void populate_download_progress(int row, QStandardItemModel *model) const;
     void serialize_into(std::ofstream &file);
 
 
-protected:
+private:
     void fill(pugi::xml_node::iterator iterator);
 
 
@@ -41,17 +41,18 @@ protected:
     // [5-Oct-2019] At some point I will replace this with a build option. I've tried to overhaul it twice with
     // template magic. Each time I broke the code badly enough that I want to think about it more before I try again.
     void fill(boost::property_tree::ptree::iterator tree_node);
-public: explicit episode(size_t item_number, boost::property_tree::ptree::iterator tree_node);
+public:
+    explicit episode(size_t item_number, boost::property_tree::ptree::iterator tree_node);
 
 private:
     std::string audio_url;
     std::size_t item_number_in_xml;
-    QString description;
-    QString guid;
+    std::string description;
+    std::string guid;
     std::string page_url;
-    QString publication_date;
-    QString subtitle;
-    QString title;
+    std::string publication_date;
+    std::string subtitle;
+    std::string title;
     mutable std::shared_ptr<download_shared_state> shared_state;
 };
 

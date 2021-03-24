@@ -31,7 +31,7 @@ signals:
     void request_update_at(QModelIndex);
     void requestEpisodeViewUpdate();
 
-protected:
+private:
     void add_rss_from_dialog();
     void change_volume(int vol);
     void closeEvent(QCloseEvent *ev) override;
@@ -62,7 +62,6 @@ protected:
     void sync_ui_with_library_state();
 
 
-private:
     std::unique_ptr<Ui::MainWindow> ui;
     std::map<std::string, podcast> channels;
     std::mutex seek_bar_lock;
@@ -77,7 +76,6 @@ private:
     std::thread daemon;
     std::atomic<int> volume;
 
-private:
     static constexpr size_t maximum_allowed_bytes_between_updates = 100000;
 
 };

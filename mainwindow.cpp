@@ -14,9 +14,11 @@
 
 #include <filesystem>
 
+#include <fmt/core.h>
+
 #include "episode.hpp"
 #include "mainwindow.hpp"
-#include "rss_getter.hpp"
+#include "rss_parser.hpp"
 #include "string_functions.hpp"
 #include "url_parser.hpp"
 
@@ -110,7 +112,7 @@ void MainWindow::download(const QModelIndex &index) {
 
     QString episode_title = index_holding_data.data(Qt::DisplayRole).toString();
     podcast & cur_pod = itr->second;
-    std::string const * url = cur_pod.find_url(episode_title);
+    std::string const * url = cur_pod.find_url(episode_title.toStdString());
 
     if(url == nullptr) {
         throw std::runtime_error("Empty URL in MainWindow::download");
@@ -143,7 +145,7 @@ void MainWindow::download(podcast &cur_pod,
                           QModelIndex index) {
 
     //try {
-        episode * ep = cur_pod.get_episode(episode_title);
+        episode * ep = cur_pod.get_episode(episode_title.toStdString());
 
         if(ep == nullptr)
             throw std::invalid_argument("Can't find given episode title in the current podcast.");
@@ -163,7 +165,7 @@ void MainWindow::download(podcast &cur_pod,
 
         auto gui_callback = [this, download_rights, podcast_title = cur_pod.title(), episode_title, ep, model](QModelIndex &index) mutable -> void {
 
-            if(index.isValid() and this->open_channel == podcast_title and ep->get_title() == episode_title ) {
+            if(index.isValid() and this->open_channel == podcast_title and ep->get_title() == episode_title.toStdString() ) {
                 model->setData(index, QVariant{}, Qt::DecorationRole);
                 ep->populate(index.row(), model, "");
                 this->request_update_at(index);
@@ -184,10 +186,9 @@ void MainWindow::download(podcast &cur_pod,
         auto cmpl = [file_dest, this, pod_name=cur_pod.title(), rights=std::move(download_rights), &episode_title] (
                 boost::beast::error_code const &ec,
                 size_t bytes_read,
-                http_connection_resources &resources) mutable -> void {
+                beastly_connection &resources) mutable -> void {
 
             rights->request_gui_update();
-            //rights->set_gui_callback(std::function<void(QModelIndex&)>());
 
             if(ec or bytes_read == 0) {
                 return;
@@ -195,9 +196,13 @@ void MainWindow::download(podcast &cur_pod,
 
             std::ofstream output_file(file_dest, std::ios::binary);
 
-            output_file << resources.parser_.get();
+            std::string const &body = resources.parser().body();
+            fmt::print("Read {} bytes\n", body.size());
+
+
+            output_file.write(body.c_str(), body.size());
+
             output_file.close();
-            std::cout << "wrote to file" << std::endl;
 
             rights->clear_lock();
 
@@ -206,7 +211,7 @@ void MainWindow::download(podcast &cur_pod,
             return;
         }
         auto &pod = r->second;
-        auto * ep = pod.get_episode(QString::fromStdString(pod_name));
+        auto * ep = pod.get_episode(pod_name);
         if(ep == nullptr) {
             return;
         }
@@ -229,18 +234,18 @@ void MainWindow::download(podcast &cur_pod,
         return;
     };
 
-    get.async_download(url, std::move(prog), std::move(cmpl));
-
+    get.async_download(url, getter::HandlerStorage({std::move(prog), std::move(cmpl)}));
 }
 
 void MainWindow::download_or_play(const QModelIndex &index) {
+
     auto itr = channels.find(open_channel);
     if(itr == channels.end())
         return;
 
     QString episode_title = index.data(Qt::DisplayRole).toString();
     podcast & cur_pod = itr->second;
-    std::string const * url = cur_pod.find_url(episode_title);
+    std::string const * url = cur_pod.find_url(episode_title.toStdString());
 
     if(url == nullptr)
         return;
@@ -286,7 +291,7 @@ void MainWindow::download_or_play(const QModelIndex &index) {
             return;
         }
 
-        episode * ep = cur_pod.get_episode(episode_title);
+        episode * ep = cur_pod.get_episode(episode_title.toStdString());
         if(ep) {
             ep->populate(index.row(),
                          static_cast<QStandardItemModel*>(ui->episodeView->model()),
@@ -296,60 +301,36 @@ void MainWindow::download_or_play(const QModelIndex &index) {
 }
 
 void MainWindow::fetch_rss(std::string url) {
-    //boost::property_tree::ptree tree;
-    pugi::xml_document doc;
 
-    // rss_feed is a std::string owning a possibly very large string (~950000 bytes in one example I'm testing on)
-    // xml_segment is a std::string_view to the xml segment of it. The alternative is making a deep copy with
-    // std::string::substr(), or using std::string::erase() which still has to move most of the data.
-    try {
-        auto [clean_url, rss_feed, lpos, len] = get.get_feed(url, 80);
+    get.async_download(url,
+                       getter::HandlerStorage({[]([[maybe_unused]] size_t read, [[maybe_unused]] size_t total){ return;},
+                       [this, ui = ui.get()](boost::beast::error_code const & ec, [[maybe_unused]] size_t bytes_read, beastly_connection &res){
+            if(ec) {
+                std::cout << "An exception occurred: " << ec.message() << std::endl;
+                return;
+            }
 
-        //std::cout << "Original URL is: " << url << "\nCleaned url is: " << clean_url << "\nRSS feed is length: " << rss_feed.length() << std::endl;
-        url = clean_url;
+            auto podcast = rss_parser(res.take_body()).parse();
+            auto title = podcast.title();
 
-        //boost::iostreams::stream<boost::iostreams::array_source> stream(xml_segment.begin(),xml_segment.size());
-        //boost::property_tree::read_xml(stream, tree);
+            auto [itr, was_inserted] = channels.insert_or_assign(title, std::move(podcast));
 
-        if(rss_feed.empty()) {
-            auto feed_data = get.get_feed(url, 443);
-            clean_url = std::get<0>(feed_data);
-            rss_feed = std::get<1>(feed_data);
-            lpos = std::get<2>(feed_data);
-            len = std::get<3>(feed_data);
 
-            if(rss_feed.empty())
-                throw std::runtime_error("Unable to connect to URL");
+            int cur_count = ui->podcastView->model()->rowCount();
+            ui->podcastView->model()->insertRow(cur_count);
+            QModelIndex index = ui->podcastView->model()->index(cur_count,0);
+            ui->podcastView->model()->setData(index, QString::fromStdString(title), Qt::DisplayRole);
+
+
+            if( !was_inserted ) {
+                // TODO: update ui->episodeView
+                if(open_channel == title)
+                    itr->second.populate(ui->episodeView, project_directory );
+                std::cout << "Assigned " << title << std::endl;
+                return;
+            }
         }
-        auto xml_segment = std::string_view(rss_feed).substr(lpos, len);
-
-        doc.load_buffer(xml_segment.begin(), xml_segment.size());
-    }
-    catch(const std::exception &e) {
-        std::cout << e.what() << std::endl;
-        return;
-    }
-
-    podcast new_channel(url);
-    //new_channel.fill_from_xml(tree);
-    new_channel.fill_from_xml(doc);
-
-    std::string title = new_channel.title();
-    auto [itr, was_inserted] = channels.insert_or_assign(title, std::move(new_channel));
-
-    if(not was_inserted) {
-        // TODO: update ui->episodeView
-        if(open_channel == title)
-            itr->second.populate(ui->episodeView, project_directory );
-        std::cout << "Assigned " << title << std::endl;
-        return;
-    }
-
-    int cur_count = ui->podcastView->model()->rowCount();
-    ui->podcastView->model()->insertRow(cur_count);
-    QModelIndex index = ui->podcastView->model()->index(cur_count,0);
-    ui->podcastView->model()->setData(index, QString::fromStdString(title), Qt::DisplayRole);
-
+    }));
 }
 
 void MainWindow::load_subscriptions() {
@@ -400,7 +381,7 @@ void MainWindow::remove_local_file(const QModelIndex &index) {
 
     QString episode_title = index.data(Qt::DisplayRole).toString();
     podcast & cur_pod = itr->second;
-    std::string const * url = cur_pod.find_url(episode_title);
+    std::string const * url = cur_pod.find_url(episode_title.toStdString());
 
     if(url == nullptr)
         return;
@@ -548,12 +529,12 @@ void MainWindow::sync_ui_with_audio_state() {
         );
 
     if(not set_seek_bar_position(time_pos)) {
-        ui->cur_time_label->setText("~"+to_time(static_cast<int>(dur * ui->seek_slider->sliderPosition() / ui->seek_slider->maximum())));
-        ui->duration_label->setText(to_time(dur));
+        ui->cur_time_label->setText(QString::fromStdString("~"+to_time(static_cast<int>(dur * ui->seek_slider->sliderPosition() / ui->seek_slider->maximum()))));
+        ui->duration_label->setText(QString::fromStdString(to_time(dur)));
     }
     else {
-        ui->cur_time_label->setText("~"+to_time(static_cast<int>(dur*time_pos)));
-        ui->duration_label->setText(to_time(dur));
+        ui->cur_time_label->setText(QString::fromStdString("~"+to_time(static_cast<int>(dur*time_pos))));
+        ui->duration_label->setText(QString::fromStdString(to_time(dur)));
 
     }
 
