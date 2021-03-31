@@ -25,7 +25,7 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    explicit MainWindow(audio_interface &audio_handle, QWidget *parent = nullptr);
+    explicit MainWindow(audio_interface &audio_handle);
 
 signals:
     void request_update_at(QModelIndex);

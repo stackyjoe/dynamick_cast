@@ -7,9 +7,6 @@
 
 #include <range/v3/range.hpp>
 
-#include <fmt/core.h>
-#include <range/v3/core.hpp>
-
 #include "url_parser.hpp"
 
 parsed_url parse(std::string url) noexcept {
@@ -21,27 +18,24 @@ parsed_url parse(std::string url) noexcept {
 
     if( boost::spirit::x3::phrase_parse(url.begin(),
                                         url.end(),
-                                        ( (-((+boost::spirit::x3::alpha) >> "://"))
+                                        (-((+boost::spirit::x3::alpha) >> "://")
                                                                    [ ([&](auto &ctx) mutable{ auto str = boost::optional<std::string>(boost::spirit::x3::_attr(ctx)); desiderata.protocol = str.has_value() ? str.value() : std::string();}) ])
-                                                    >> (+(boost::spirit::x3::char_("a-zA-Z0-9.:@")))[([&desiderata](auto &ctx) mutable {
-                                                                                                      auto str = boost::optional<std::string>(boost::spirit::x3::_attr(ctx));
+                                                    >> (+(boost::spirit::x3::char_ - (boost::spirit::x3::char_("[/?]"))))[([&desiderata](auto &ctx) mutable {
+                                                                                                                           auto str = boost::optional<std::string>(boost::spirit::x3::_attr(ctx));
 
                                                                                                                            if(! str.has_value()) {
                                                                                                                                desiderata.host = "";
                                                                                                                                desiderata.port = "";
                                                                                                                                return;
                                                                                                                            }
+
                                                                                                                            const std::string authority_text = str.value();
-                                                                                                                           auto id_itr = std::find(authority_text.begin(), authority_text.end(), '@');
 
                                                                                                                            auto colon_itr = std::find(authority_text.begin(), authority_text.end(), ':');
 
                                                                                                                            if(colon_itr == authority_text.end()) {
-
                                                                                                                                desiderata.host = authority_text;
                                                                                                                                desiderata.port = desiderata.protocol == "http" ? "80" : "443";
-                                                                                                                               if(desiderata.protocol.empty())
-                                                                                                                                   desiderata.protocol = "https";
                                                                                                                                return;
                                                                                                                            }
 
@@ -53,12 +47,12 @@ parsed_url parse(std::string url) noexcept {
 
                                                                                                                        })]
                                                     >> -(
-                                                        (+(boost::spirit::x3::char_ - boost::spirit::x3::char_("?"))))[ ([&](auto &ctx) mutable {auto str = boost::optional<std::string>(boost::spirit::x3::_attr(ctx)); desiderata.path = str.has_value()? str.value() : std::string();})]
-
+                                                        (+(boost::spirit::x3::char_ - boost::spirit::x3::char_("?")))[ ([&](auto &ctx) mutable {auto str = boost::optional<std::string>(boost::spirit::x3::_attr(ctx)); desiderata.path = str.has_value()? str.value() : std::string();})]
+                                                    )
                                                     >> -(
-                                                        (+(boost::spirit::x3::char_ - boost::spirit::x3::char_("#"))))[([&](auto &ctx){auto str = boost::optional<std::string>(boost::spirit::x3::_attr(ctx)); desiderata.query = str.has_value() ? str.value() : std::string();})]
-
-                                         >> -((+(boost::spirit::x3::char_)))[([&]([[maybe_unused]] auto &ctx){auto str = boost::optional<std::string>(boost::spirit::x3::_attr(ctx)); desiderata.fragment = str.has_value() ? str.value() : std::string();})]
+                                                        (+(boost::spirit::x3::char_ - boost::spirit::x3::char_("#")))[([&](auto &ctx){auto str = boost::optional<std::string>(boost::spirit::x3::_attr(ctx)); desiderata.query = str.has_value() ? str.value() : std::string();})]
+                                                    )
+                                         >> -((+(boost::spirit::x3::char_))[([&]([[maybe_unused]] auto &ctx){auto str = boost::optional<std::string>(boost::spirit::x3::_attr(ctx)); desiderata.fragment = str.has_value() ? str.value() : std::string();})])
                                         ,
                                         boost::spirit::x3::space)) {
         // If parse was successful
@@ -66,7 +60,7 @@ parsed_url parse(std::string url) noexcept {
         return desiderata;
     }
 
-    fmt::print("Failed to parse.\n");
+    std::cout << "Failed to parse.\n";
 
     return desiderata;
 }

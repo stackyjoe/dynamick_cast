@@ -30,7 +30,7 @@ public:
     void set_index(QModelIndex index);
     std::optional<std::unique_lock<std::mutex>> try_lock() const noexcept;
 
-protected:
+private:
     mutable std::mutex mtx;
     mutable std::optional<std::unique_lock<std::mutex>> lock_storage;
     std::atomic<size_t> completed_bytes;

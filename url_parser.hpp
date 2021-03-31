@@ -8,7 +8,6 @@
 
 
 struct parsed_url {
-
 	std::string protocol;
 	std::string host;
 	std::string port;
@@ -16,9 +15,13 @@ struct parsed_url {
     std::string total_path;
 	std::string query;
 	std::string fragment;
+
+    bool operator==(parsed_url const &other) const noexcept {
+        return (protocol == other.protocol) &&
+                (host == other.host) && (total_path == other.total_path);
+    }
 };
 
-//std::tuple<std::string,std::string,std::string,std::string> parse_url(std::string url) noexcept;
 
 parsed_url parse(std::string url) noexcept;
 

@@ -18,10 +18,10 @@ private:
     std::unique_ptr<audio_wrapper> implementation;
 
     template<class audio_implementation>
-    explicit audio_interface(std::unique_ptr<audio_implementation> _implementation) {
+    explicit audio_interface(std::unique_ptr<audio_implementation> _implementation)
+        : implementation(std::move(_implementation)) {
         static_assert (std::is_base_of<audio_wrapper, audio_implementation>::value,
                        "audio_interface template constructor must be called with a std::unique_ptr to a class derived from audio_player.");
-        implementation = std::move(_implementation);
     }
 
 public:
@@ -42,6 +42,11 @@ public:
     // Copy constructor and copy assignment are implicitly forbidden by virtue of owning a unique_ptr and mutex.
     audio_interface(audio_interface &&) = default;
     audio_interface &operator=(audio_interface &&) = default;
+
+    audio_interface(audio_interface const &) = delete;
+    audio_interface &operator=(audio_interface const &) = delete;
+
+    ~audio_interface() = default;
 
 
     template<class audio_implementation>

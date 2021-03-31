@@ -24,8 +24,8 @@
 
 using namespace std::string_literals;
 
-MainWindow::MainWindow(audio_interface &audio_handle, QWidget *parent) :
-    QMainWindow(parent),
+MainWindow::MainWindow(audio_interface &audio_handle) :
+    QMainWindow(nullptr),
     ui(std::make_unique<Ui::MainWindow>()),
     _audio_handle(audio_handle),
     state(UserDesiredState::stop),
@@ -231,10 +231,10 @@ void MainWindow::download(podcast &cur_pod,
         rights.reset();
 
         //resources.promise.set_value(true);
-        return;
     };
 
-    get.async_download(url, getter::HandlerStorage({std::move(prog), std::move(cmpl)}));
+    auto f = get.get(url, std::move(prog), std::move(cmpl));
+    //get.async_download(url, getter::HandlerStorage({std::move(prog), std::move(cmpl)}));
 }
 
 void MainWindow::download_or_play(const QModelIndex &index) {
@@ -302,8 +302,8 @@ void MainWindow::download_or_play(const QModelIndex &index) {
 
 void MainWindow::fetch_rss(std::string url) {
 
-    get.async_download(url,
-                       getter::HandlerStorage({[]([[maybe_unused]] size_t read, [[maybe_unused]] size_t total){ return;},
+    auto f = get.get(url,
+                       []([[maybe_unused]] size_t read, [[maybe_unused]] size_t total){ return;},
                        [this, ui = ui.get()](boost::beast::error_code const & ec, [[maybe_unused]] size_t bytes_read, beastly_connection &res){
             if(ec) {
                 std::cout << "An exception occurred: " << ec.message() << std::endl;
@@ -330,7 +330,7 @@ void MainWindow::fetch_rss(std::string url) {
                 return;
             }
         }
-    }));
+    );
 }
 
 void MainWindow::load_subscriptions() {

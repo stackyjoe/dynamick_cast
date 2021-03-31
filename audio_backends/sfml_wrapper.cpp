@@ -57,17 +57,14 @@ const std::vector<std::string> & sfml_wrapper::supported_file_formats() const no
 
 void sfml_wrapper::play() {
     interface.play();
-    return;
 }
 
 void sfml_wrapper::pause() {
     interface.pause();
-    return;
 }
 
 void sfml_wrapper::stop() {
     interface.stop();
-    return;
 }
 
 bool sfml_wrapper::open_from_file(const std::string &path) {
@@ -77,13 +74,9 @@ bool sfml_wrapper::open_from_file(const std::string &path) {
 
 void sfml_wrapper::seek_by_percent(float percent) {
     interface.setPlayingOffset(percent*interface.getDuration());
-    return;
 }
 
 void sfml_wrapper::set_volume(int new_vol) {
     interface.setVolume(static_cast<float>(new_vol));
-    return;
 }
 
-
-audio_interface audio_handle = audio_interface::make<sfml_wrapper>();

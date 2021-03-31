@@ -1,6 +1,8 @@
 #ifndef MP3_H_INCLUDED
 #define MP3_H_INCLUDED
 
+#include <memory>
+
 #include <SFML/Audio.hpp>
 #include "mpg123.h"
 
@@ -10,7 +12,7 @@ class Mp3 : public sf::SoundStream
 {
 public :
     Mp3();
-    ~Mp3();
+    ~Mp3() override;
 
     sf::Time getDuration() const;
 
@@ -24,7 +26,7 @@ protected :
 private :
     mpg123_handle*      myHandle;
     size_t              myBufferSize;
-    unsigned char*      myBuffer;
+    std::unique_ptr<unsigned char>      myBuffer;
     sf::Mutex           myMutex;
     long                mySamplingRate;
 };

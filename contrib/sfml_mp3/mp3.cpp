@@ -46,9 +46,9 @@ off_t MemoryDataLSeek(void* rawMp3Data, off_t offset, int whence);
 void MemoryDataCleanup(void* rawMp3Data);
 
 Mp3::Mp3() :
-myHandle    (NULL),
+myHandle    (nullptr),
 myBufferSize(0),
-myBuffer    (NULL),
+myBuffer    (nullptr),
 mySamplingRate(0)
 {
     int  err = MPG123_OK;
@@ -58,7 +58,7 @@ mySamplingRate(0)
         return;
     }
 
-    myHandle = mpg123_new(NULL, &err);
+    myHandle = mpg123_new(nullptr, &err);
     if (!myHandle)
     {
         std::cerr << "Unable to create mpg123 handle: " << mpg123_plain_strerror(err) << std::endl;
@@ -74,8 +74,7 @@ Mp3::~Mp3()
 
     if (myBuffer)
     {
-        delete [] myBuffer;
-        myBuffer = NULL;
+        myBuffer.release();
     }
 
     mpg123_close(myHandle);
@@ -102,8 +101,7 @@ bool Mp3::openFromFile(const std::string& filename)
 
     if (myBuffer)
     {
-        delete [] myBuffer;
-        myBuffer = nullptr;
+        myBuffer.release();
     }
 
     if(myHandle)
@@ -127,7 +125,7 @@ bool Mp3::openFromFile(const std::string& filename)
     mySamplingRate = rate;
 
     myBufferSize = mpg123_outblock(myHandle);
-    myBuffer = new unsigned char[myBufferSize];
+    myBuffer = std::make_unique<unsigned char>(myBufferSize);
     if (!myBuffer)
     {
         std::cout << "Failed to reserve memory for decoding one frame for \"" << filename << "\"" << std::endl;
@@ -143,11 +141,7 @@ bool Mp3::OpenFromMemory(void* data, size_t sizeInBytes)
 {
     stop();
 
-    if (myBuffer)
-    {
-        delete [] myBuffer;
-        myBuffer = nullptr;
-    }
+    myBuffer.release();
 
     if(myHandle)
       mpg123_close(myHandle);
@@ -176,7 +170,7 @@ bool Mp3::OpenFromMemory(void* data, size_t sizeInBytes)
     mySamplingRate = rate;
 
     myBufferSize = mpg123_outblock(myHandle);
-    myBuffer = new unsigned char[myBufferSize];
+    myBuffer = std::make_unique<unsigned char>(myBufferSize);
     if (!myBuffer)
     {
         std::cerr << "Failed to reserve memory for decoding one frame for Memory Object" << std::endl;
@@ -195,9 +189,9 @@ bool Mp3::onGetData(Chunk& data)
     if (myHandle)
     {
         size_t done;
-        mpg123_read(myHandle, myBuffer, myBufferSize, &done);
+        mpg123_read(myHandle, myBuffer.get(), myBufferSize, &done);
 
-        data.samples   = (short*)myBuffer;
+        data.samples   = reinterpret_cast<short*>(myBuffer.get());
         data.sampleCount = done/sizeof(short);
 
         return (data.sampleCount > 0);

@@ -41,6 +41,4 @@ private:
     music_adapter interface;
 };
 
-extern audio_interface audio_handle;
-
 #endif // SFML_WRAPPER_HPP

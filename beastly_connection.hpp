@@ -1,7 +1,8 @@
-#ifndef ACTIVE_DOWNLOAD_HPP
-#define ACTIVE_DOWNLOAD_HPP
+#ifndef BEASTLY_CONNECTION_HPP
+#define BEASTLY_CONNECTION_HPP
 
 #include <boost/asio/ip/tcp.hpp>
+#include <boost/asio/spawn.hpp>
 #include <boost/asio/ssl.hpp>
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
@@ -11,18 +12,13 @@
 #include <optional>
 #include <utility>
 
-#include "contrib/function2/function2.hpp"
-
 #include "url_parser.hpp"
 
 class beastly_connection
 {
-public:
-    struct HandlerStorage {
-        fu2::unique_function<void(size_t,size_t)> progress_handler;
-        fu2::unique_function<void(boost::beast::error_code const &, size_t, beastly_connection &)> completion_handler;
-    };
 private:
+    static constexpr size_t default_download_limit = 1024*1024*64;
+
     size_t completed;
     size_t total;
     parsed_url url;
@@ -32,38 +28,13 @@ private:
     boost::beast::flat_buffer buffer_;
     boost::beast::http::response_parser<boost::beast::http::string_body> parser_;
     std::promise<bool> promise;
-    fu2::unique_function<void(size_t,size_t)> progress_handler_;
-    fu2::unique_function<void(boost::beast::error_code const &, size_t, beastly_connection &)> completion_handler_;
-
-    void read_some(boost::system::error_code const &ec,
-                   size_t bytes_read,
-                   std::unique_ptr<beastly_connection> &&owning_ptr);
 
 public:
-    beastly_connection(parsed_url url, boost::asio::io_context &io_context, boost::asio::ip::tcp::resolver &resolver);
     beastly_connection(parsed_url url,
-                              boost::asio::io_context &io_context, boost::asio::ip::tcp::resolver &resolver,
-                              size_t body_size,
-                              fu2::unique_function<void(size_t,size_t)> &&progress_handler_,
-                              fu2::unique_function<void(boost::beast::error_code const &, size_t, beastly_connection &)> &&completion_handler_);
+                       boost::asio::io_context &io_context,
+                       boost::asio::ip::tcp::resolver &resolver);
 
-    /*
-    beastly_connection(parsed_url url,
-                              boost::asio::ip::tcp::socket &&socket,
-                              size_t body_size
-                              );
 
-    beastly_connection(parsed_url url,
-                              boost::asio::ip::tcp::socket &&socket,
-                              size_t body_size,
-                              std::function<void(size_t,size_t)> &&progress_handler_,
-                              std::function<void(boost::beast::error_code const &, size_t, beastly_connection &)> &&completion_handler_
-                              );
-
-    beastly_connection(parsed_url,
-                              boost::asio::ip::tcp::socket &&socket,
-                              boost::beast::http::response_parser<boost::beast::http::empty_body> &&parser);
-                              */
 
     beastly_connection(const beastly_connection &) = delete;
     beastly_connection &operator=(const beastly_connection &) = delete;
@@ -83,15 +54,19 @@ public:
         return parser_.get();
     }
 
+    void set_parser_body_limit(size_t size_hint) {
+        parser_.body_limit(std::max(default_download_limit, size_hint));
+    }
+
     [[nodiscard]] boost::beast::error_code set_up_ssl(boost::asio::ssl::context_base::method method, boost::asio::ssl::verify_mode mode);
 
-    void send_request(boost::beast::http::request<boost::beast::http::string_body> hdr_request);
-    void read_file(boost::beast::http::request<boost::beast::http::string_body> file_request, std::unique_ptr<beastly_connection> hoc);
+    void write_request(boost::beast::http::request<boost::beast::http::string_body> hdr_request, boost::asio::yield_context yield_ctx);
+    void read_header(boost::asio::yield_context yield_ctx);
+    size_t async_read_some(boost::asio::yield_context yield_ctx);
+    bool parser_is_done() const noexcept;
 
-    decltype (progress_handler_) take_progress_handler();
-
-    boost::beast::http::status get_status() noexcept;
+    boost::beast::http::status get_status() const noexcept;
 
 };
 
-#endif // ACTIVE_DOWNLOAD_HPP
+#endif // BEASTLY_CONNECTION_HPP

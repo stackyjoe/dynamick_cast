@@ -157,7 +157,7 @@ bool SoundFileReaderMp3::probeFirstFrame(sf::InputStream& stream) {
         sf::Int64 bytesReadFromStream = stream.read(streamBuffer, streamSize); // read from input stream
         numReadsFromStream++;
         if (bytesReadFromStream <= 0) {
-            std::cout << (bytesReadFromStream == 0 ? "stream empty" : ("stream error: " + bytesReadFromStream)) << std::endl;
+            std::cout << (bytesReadFromStream == 0 ? "stream empty" : ("stream error: " + std::to_string(bytesReadFromStream))) << std::endl;
             break;
         }
         totalReadBytes += bytesReadFromStream;
@@ -174,6 +174,7 @@ bool SoundFileReaderMp3::probeFirstFrame(sf::InputStream& stream) {
     std::cout << "total bytes read: "    << totalReadBytes << std::endl;
     std::cout << "total bytes decoded: " << totalDecodedBytes << std::endl;
     std::cout << "reads from stream: "   << numReadsFromStream << std::endl;
+    return true;
 }
 
 void SoundFileReaderMp3::fillSfmlInfo(sf::SoundFileReader::Info& info) const {
@@ -231,7 +232,7 @@ sf::Uint64 SoundFileReaderMp3::read(sf::Int16* samples, sf::Uint64 maxCount) {
         sf::Int64 bytesReadFromStream = m_stream->read(m_streambuffer, m_streambufferSize);
         std::cout << "read " << bytesReadFromStream << " bytes from stream" << std::endl;
         if (bytesReadFromStream <= 0) {
-            std::cout << (bytesReadFromStream == 0 ? "stream empty" : ("stream error: " + bytesReadFromStream)) << std::endl;
+            std::cout << (bytesReadFromStream == 0 ? "stream empty" : ("stream error: " + std::to_string(bytesReadFromStream))) << std::endl;
             break;
         }
         totalReadBytes += bytesReadFromStream;
