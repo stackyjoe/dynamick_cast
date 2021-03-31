@@ -1,5 +1,5 @@
 # dynamick_cast
-Dynamick cast is a simple podcast subscription and playback application for the desktop. The current version of this has only been tested to build on FreeBSD, but it should build under Windows and most GNU/Linuxes without too much trouble.
+Dynamick cast is a simple podcast subscription and playback application for the desktop. The current version of this has only been tested to build on FreeBSD 12.2 RELEASE but with the important change of using Bleeding Edge (and not LTS) clang++. It should build under Windows and most GNU/Linuxes without too much trouble, as long as you can get a reasonably recent C++ compiler..
 
 Uses the following libraries:
 + CMake build system
@@ -9,7 +9,7 @@ Uses the following libraries:
     - In the short term I intend to first create a pure virtual interface class to wrap the Qt GUI to make that easier.
 + SFML for Audio
     - Still looking for alternatives.
-    - SFML does not formally MP3 support yet. For now I'm using someone's experimental SoundFileReader plugin for SFML.
+    - SFML does not formally have MP3 support yet. For now I'm using someone's experimental SoundFileReader plugin for SFML.
     - It has an optional Audiere audio backend.
     - Bug: on Ubuntu the application needs to be run with padsp for audiere to find the OSS audio device.
 + Boost libraries for networking
