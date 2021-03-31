@@ -26,7 +26,7 @@ protected :
 private :
     mpg123_handle*      myHandle;
     size_t              myBufferSize;
-    std::unique_ptr<unsigned char>      myBuffer;
+    std::unique_ptr<unsigned char[]>      myBuffer;
     sf::Mutex           myMutex;
     long                mySamplingRate;
 };

@@ -6,6 +6,7 @@
 #include <QMetaObject>
 #include <QStringListModel>
 #include <QUrl>
+#include <QTimer>
 
 #include <boost/iostreams/stream.hpp>
 #include <boost/property_tree/json_parser.hpp>
@@ -36,11 +37,12 @@ MainWindow::MainWindow(audio_interface &audio_handle) :
         [this](){
             while(1) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
-                if(std::unique_lock l(this->daemon_lock, std::try_to_lock); l.owns_lock()) {
-                    this->sync_audio_with_library_state();
 
-                    this->sync_ui_with_audio_state();
-                }
+
+                QTimer::singleShot(0,this, &MainWindow::sync_audio_with_library_state);
+                QTimer::singleShot(0, this, &MainWindow::sync_ui_with_audio_state);
+
+
             }
         }),
     volume(100)

@@ -125,7 +125,7 @@ bool Mp3::openFromFile(const std::string& filename)
     mySamplingRate = rate;
 
     myBufferSize = mpg123_outblock(myHandle);
-    myBuffer = std::make_unique<unsigned char>(myBufferSize);
+    myBuffer = std::make_unique<unsigned char[]>(myBufferSize);
     if (!myBuffer)
     {
         std::cout << "Failed to reserve memory for decoding one frame for \"" << filename << "\"" << std::endl;
@@ -170,7 +170,7 @@ bool Mp3::OpenFromMemory(void* data, size_t sizeInBytes)
     mySamplingRate = rate;
 
     myBufferSize = mpg123_outblock(myHandle);
-    myBuffer = std::make_unique<unsigned char>(myBufferSize);
+    myBuffer = std::make_unique<unsigned char[]>(myBufferSize);
     if (!myBuffer)
     {
         std::cerr << "Failed to reserve memory for decoding one frame for Memory Object" << std::endl;
