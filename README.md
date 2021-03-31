@@ -1,12 +1,22 @@
 # dynamick_cast
-Dynamick cast is a simple podcast subscription and playback application for the desktop. So far it compiles on FreeBSD 12 and Ubuntu 18.04. Uses the following libraries:
+Dynamick cast is a simple podcast subscription and playback application for the desktop. The current version of this has only been tested to build on FreeBSD, but it should build under Windows and most GNU/Linuxes without too much trouble.
 
-+ Audiere for audio handling.
-    - This is quite old and will need to be replaced.
-    - Likely I'll just wait until SFML adds mp3 support.
+Uses the following libraries:
++ CMake build system
+    - Replaced previous QMake system.
++ Qt for the GUI.
+    - I am planning on modularizing the GUI component and adding Dear ImGui as another option. This is probably necessary to use Qt and maintain a BSD license.
+    - In the short term I intend to first create a pure virtual interface class to wrap the Qt GUI to make that easier.
++ SFML for Audio
+    - Still looking for alternatives.
+    - SFML does not formally MP3 support yet. For now I'm using someone's experimental SoundFileReader plugin for SFML.
+    - It has an optional Audiere audio backend.
     - Bug: on Ubuntu the application needs to be run with padsp for audiere to find the OSS audio device.
-+ Boost libraries
-    - I've only successfully built with versions 1.68 and higher.
-    - In particular, on Ubuntu 18.04 to build the project you will have to manually build Boost libraries and install them, as the apt package is 1.65 (and last I tried it the build will fail).
-+ PugiXML
-    - I did not remove the code to parse XML using Boost `property_tree`s. However they seem to work very inconsistently.
++ Boost libraries for networking
+    - Currently this only uses Boost ASIO and Beast.
+    - I've only built the current project with Boost version 1.75.
+    - There is legacy code for XML parsing using ptree, but it wasn't very robust so I will likely get rid of it.
++ PugiXML for XML parsing
++ Function2
+    - I need a replacement for std::function that can handle move-only function-objects.
+
