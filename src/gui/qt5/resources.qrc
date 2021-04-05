@@ -1,0 +1,12 @@
+<RCC>
+    <qresource prefix="/">
+        <file alias="pause.svg">../../../lib/icons/pause.svg</file>
+        <file alias="play.svg">../../../lib/icons/play.svg</file>
+        <file alias="skip-back.svg">../../../lib/icons/skip-back.svg</file>
+        <file alias="skip-forward.svg">../../../lib/icons/skip-forward.svg</file>
+        <file alias="loader.svg">../../../lib/icons/loader.svg</file>
+        <file alias="check-square.svg">../../../lib/icons/check-square.svg</file>
+        <file alias="package.svg">../../../lib/icons/package.svg</file>
+        <file alias="hexagon.svg">../../../lib/icons/hexagon.svg</file>
+    </qresource>
+</RCC>
