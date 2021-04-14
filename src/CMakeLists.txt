@@ -1,20 +1,8 @@
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${SHARED_CXX_FLAGS} -g -Og -Wall -Werror -pedantic-errors ")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${SHARED_CXX_FLAGS} -O2")
 
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTOUIC ON)
-set(CMAKE_AUTORCC ON)
-
-set(CMAKE_AUTOUIC_SEARCH_PATHS ${CMAKE_AUTOUIC_SEARCH_PATHS} gui/qt5/)
-
-
 #Add executable target
-add_executable(main main.cpp )#gui/qt5/mainwindow.hpp gui/qt5/mainwindow.cpp)
-
-#use Qt
-find_package(Qt5Widgets REQUIRED)
-target_link_libraries(main PRIVATE Qt5::Widgets)
-#
+add_executable(main main.cpp)
 
 add_subdirectory(audio)
 add_subdirectory(gui)

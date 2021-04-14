@@ -5,12 +5,13 @@
 
 #include "sfml_mp3/music_adapter.hpp"
 
-#include "audio/audio_interface.hpp"
+#include "audio/audio_abstraction.hpp"
 
-class sfml_wrapper : public audio_wrapper
+class sfml_wrapper : public audio_abstraction
 {
 friend std::unique_ptr<sfml_wrapper> std::make_unique<sfml_wrapper>();
 public:
+    sfml_wrapper();
     ~sfml_wrapper() override = default;
 
     sfml_wrapper(const sfml_wrapper &other) = delete;
@@ -33,8 +34,6 @@ public:
     void seek_by_percent(float percent) override;
     void set_volume(int new_vol) override;
 
-protected:
-    sfml_wrapper();
 
 private:
     std::vector<std::string> const supported_formats;

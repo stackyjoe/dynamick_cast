@@ -17,6 +17,9 @@
 
 #include <fmt/core.h>
 
+#include "ui_mainwindow.h"
+
+
 #include "library/episode.hpp"
 #include "gui/qt5/mainwindow.hpp"
 #include "library/rss_parser.hpp"
@@ -25,10 +28,10 @@
 
 using namespace std::string_literals;
 
-MainWindow::MainWindow(audio_interface &audio_handle) :
+MainWindow::MainWindow(thread_safe_interface<audio_abstraction> &&audio_handle) :
     QMainWindow(nullptr),
     ui(std::make_unique<Ui::MainWindow>()),
-    _audio_handle(audio_handle),
+    audio_handle(std::move(audio_handle)),
     state(UserDesiredState::stop),
     home_path(QDir::homePath().toStdString()),
     native_separator(""s+QDir::separator().toLatin1()),
@@ -59,6 +62,8 @@ MainWindow::MainWindow(audio_interface &audio_handle) :
 
     set_up_connections();
 }
+
+MainWindow::~MainWindow() = default;
 
 void MainWindow::set_up_connections() {
     connect(ui->podcastView, &QTableView::doubleClicked, this, &MainWindow::set_active_channel);
@@ -93,7 +98,7 @@ void MainWindow::add_rss_from_dialog() {
 
 void MainWindow::change_volume(int vol) {
     volume = vol;
-    _audio_handle.perform([vol](audio_wrapper &interface){interface.set_volume(vol);});
+    audio_handle.perform([vol](audio_abstraction &interface){interface.set_volume(vol);});
 }
 
 void MainWindow::closeEvent([[maybe_unused]] QCloseEvent *ev) {
@@ -144,7 +149,7 @@ void MainWindow::download(podcast &cur_pod,
                           QModelIndex index) {
 
 
-    fmt::print("Downloading url: {}\n", url);
+//    fmt::print("Downloading url: {}\n", url);
     episode * ep = cur_pod.get_episode(episode_title.toStdString());
 
     if(ep == nullptr)
@@ -261,8 +266,8 @@ void MainWindow::download_or_play(const QModelIndex &index) {
 
     if(file.exists() and file.isFile()) {
         int vol = volume;
-        if( _audio_handle.perform(
-            [local_path, vol](audio_wrapper &handle) -> bool {
+        if( audio_handle.perform(
+            [local_path, vol](audio_abstraction &handle) -> bool {
                 if(not handle.open_from_file(local_path))
                     return false;
                 handle.play();
@@ -309,8 +314,20 @@ void MainWindow::fetch_rss(std::string url) {
 
             auto [itr, was_inserted] = channels.insert_or_assign(title, std::move(podcast));
 
-
             int cur_count = ui->podcastView->model()->rowCount();
+
+            if( !was_inserted ) {
+                for(int i = 0; i < cur_count; ++i) {
+                    auto cur_index = ui->podcastView->model()->index(i, 0);
+                    auto cur_podcast_title = ui->podcastView->model()->data(cur_index, Qt::DisplayRole).toString().toStdString();
+                    if(title == cur_podcast_title) {
+                        ui->podcastView->model()->removeRow(i);
+                        cur_count = i;
+                        break;
+                    }
+                }
+            }
+
             ui->podcastView->model()->insertRow(cur_count);
             QModelIndex index = ui->podcastView->model()->index(cur_count,0);
             ui->podcastView->model()->setData(index, QString::fromStdString(title), Qt::DisplayRole);
@@ -442,7 +459,7 @@ void MainWindow::save_subscriptions() {
 void MainWindow::seek() {
     float pos = ui->seek_slider->sliderPosition();
     pos = pos/std::max(1,ui->seek_slider->maximum());
-    _audio_handle.perform([pos](audio_wrapper &player){player.seek_by_percent(pos);});
+    audio_handle.perform([pos](audio_abstraction &player){player.seek_by_percent(pos);});
     seek_bar_lock.unlock();
 }
 
@@ -472,12 +489,12 @@ bool MainWindow::set_seek_bar_position(float percent) {
 void MainWindow::sync_audio_with_library_state() {
     switch(state) {
     case UserDesiredState::play :
-        switch(_audio_handle.get_status()) {
+        switch(audio_handle.perform_unsynchronized([](auto &h){return h.get_status();})) {
         case PlayerStatus::playing:
             break;
         case PlayerStatus::paused: {
             int vol = volume;
-            _audio_handle.perform([vol](audio_wrapper &player){player.play(); player.set_volume(vol);});
+            audio_handle.perform([vol](audio_abstraction &player){player.play(); player.set_volume(vol);});
         } break;
         default: {
             state = UserDesiredState::stop;
@@ -486,9 +503,9 @@ void MainWindow::sync_audio_with_library_state() {
         }
         break;
     case UserDesiredState::pause :
-        switch(_audio_handle.get_status()) {
+        switch(audio_handle.perform_unsynchronized([](auto &h){return h.get_status();})) {
         case PlayerStatus::playing:
-            _audio_handle.perform([](audio_wrapper &player){player.pause();});
+            audio_handle.perform([](audio_abstraction &player){player.pause();});
             break;
 
         default:
@@ -497,9 +514,9 @@ void MainWindow::sync_audio_with_library_state() {
         break;
 
     case UserDesiredState::stop :
-        switch (_audio_handle.get_status()) {
+        switch (audio_handle.perform_unsynchronized([](auto &h){return h.get_status();})) {
         case PlayerStatus::playing:
-            _audio_handle.perform([](audio_wrapper &player){player.pause();});
+            audio_handle.perform([](audio_abstraction &player){player.pause();});
                         break;
 
         default:
@@ -518,8 +535,10 @@ void MainWindow::sync_ui_with_audio_state() {
         return;
 
     // Synchronizes UI seek bar with audio backend.
-    auto [dur, time_pos] = _audio_handle.perform(
-            [](audio_wrapper &player) { return std::make_pair(player.estimate_duration(), player.get_percent_played()); }
+    auto [dur, time_pos] = audio_handle.perform(
+            [](audio_abstraction &player) {
+                return std::make_pair(player.estimate_duration(), player.get_percent_played());
+            }
         );
 
     if(not set_seek_bar_position(time_pos)) {
@@ -529,12 +548,11 @@ void MainWindow::sync_ui_with_audio_state() {
     else {
         ui->cur_time_label->setText(QString::fromStdString("~"+to_time(static_cast<int>(dur*time_pos))));
         ui->duration_label->setText(QString::fromStdString(to_time(dur)));
-
     }
 
 
     // Synchronizes play/pause push button
-    switch( _audio_handle.get_status() ) {
+    switch( audio_handle.perform_unsynchronized([](auto &h){return h.get_status();})) {
     case PlayerStatus::playing:
         ui->play_button->setIcon(QIcon(":/pause.svg"));
         ui->play_button->update();
@@ -553,9 +571,7 @@ void MainWindow::sync_ui_with_download_state() {
     }
 
     auto &p = kv_pair->second;
-    //ui->episodeView->model()->removeRows(0, ui->episodeView->model()->rowCount());
     p.populate_download_progress(ui->episodeView);
-
     emit requestEpisodeViewUpdate();
 }
 
@@ -570,7 +586,6 @@ void MainWindow::sync_ui_with_library_state() {
         ui->podcastView->model()->setData(index, QString::fromStdString(title), Qt::DisplayRole);
         ++cur_row;
     }
-
 
     ui->episodeView->model()->removeRows(0, ui->episodeView->model()->rowCount());
     if(auto itr = channels.find(open_channel); itr != channels.end()) {
@@ -615,13 +630,10 @@ void MainWindow::podcastViewContextMenu(QPoint p) {
 
         menu.addAction(QString("Remove podcast"),
                        [this, itr, row=index.row()](){
-                            std::thread t([this, itr, row](){
-                                std::string channel_name = itr->first;
-                                this->channels.erase(itr);
-                                this->ui->podcastView->model()->removeRow(row);
-                                this->remove_local_files(channel_name);
-                            });
-                            t.detach();
+                            std::string channel_name = itr->first;
+                            this->channels.erase(itr);
+                            this->ui->podcastView->model()->removeRow(row);
+                            this->remove_local_files(channel_name);
                         }
         );
 

@@ -1,6 +1,6 @@
 
-add_library(audio OBJECT audio_wrapper.hpp audio_interface.hpp)
-target_include_directories(audio PUBLIC ./)
+add_library(audio OBJECT audio_abstraction.hpp)# audio_interface.hpp)
+#target_include_directories(audio PUBLIC ./)
 
 if(USE_SFML)
 

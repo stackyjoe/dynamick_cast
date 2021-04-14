@@ -1,5 +1,5 @@
-#ifndef AUDIO_WRAPPER_HPP
-#define AUDIO_WRAPPER_HPP
+#ifndef AUDIO_ABSTRACTION_HPP
+#define AUDIO_ABSTRACTION_HPP
 
 #include <mutex>
 #include <optional>
@@ -8,17 +8,18 @@
 class audio_interface;
 enum class PlayerStatus { error, playing, paused, stopped };
 
-/// \class audio_wrapper
-/// \brief The audio_wrapper class is an interface for different backends. Currently,
+/// \class audio_abstraction
+/// \brief The audio_abstraction class is an interface for different backends. Currently,
 ///  only an SFML audio backend is implemented, however it should be pretty easy to
 /// implement others as needed. Implementations MUST declare
 ///     friend std::unique_ptr<impl_class_name> std::make_unique<impl_class_name>();
 /// for the template make() function in audio_interface to compile.
 
-class audio_wrapper
+class audio_abstraction
 {
 public:
-    virtual ~audio_wrapper() = 0;
+    audio_abstraction() = default;
+    virtual ~audio_abstraction() = default;
 
     /// \brief Get a list of accepted file formats for the audio backend.
     /// \return A const reference to a vector of strings. The implementation
@@ -42,9 +43,6 @@ public:
 
     mutable std::mutex access_lock;
 
-protected:
-    audio_wrapper() = default;
-
 };
 
-#endif // AUDIO_WRAPPER_HPP
+#endif // AUDIO_ABSTRACTION_HPP

@@ -6,8 +6,6 @@
 
 #include <iostream>
 
-audio_wrapper::~audio_wrapper() = default;
-
 using namespace std::string_literals;
 
 sfml_wrapper::sfml_wrapper()

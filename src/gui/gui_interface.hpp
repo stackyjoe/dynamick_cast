@@ -1,20 +1,19 @@
-#ifndef GUI_INTERFACE_HPP
-#define GUI_INTERFACE_HPP
+#ifndef GUI_ABSTRACTION_HPP
+#define GUI_ABSTRACTION_HPP
 
-class gui_interface {
+#include <memory>
+
+class gui_abstraction {
 public:
-    virtual ~gui_interface() = 0;
+    gui_abstraction() = default;
+    virtual ~gui_abstraction() = 0;
 
     virtual void sync_audio_with_library_state() = 0;
     virtual void sync_ui_with_audio_state() = 0;
     virtual void sync_ui_with_download_state() = 0;
     virtual void sync_ui_with_library_state() = 0;
 
-protected:
-    gui_interface() = default;
-
-private:
-
+    mutable std::mutex access_lock;
 };
 
-#endif // GUI_INTERFACE_HPP
+#endif // GUI_ABSTRACTION_HPP

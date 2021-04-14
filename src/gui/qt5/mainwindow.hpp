@@ -8,10 +8,10 @@
 #include <map>
 #include <thread>
 
-#include "ui_mainwindow.h"
-#include "gui/qt5/ui_mainwindow.h"
+//#include "ui_mainwindow.h"
 
-#include "audio/audio_interface.hpp"
+#include "dynamick_cast/thread_safe_interface.hpp"
+#include "audio/audio_abstraction.hpp"
 #include "library/podcast.hpp"
 #include "networking/getter.hpp"
 #include "shared/user_desired_state.hpp"
@@ -26,7 +26,8 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    explicit MainWindow(audio_interface &audio_handle);
+    explicit MainWindow(thread_safe_interface<audio_abstraction> &&audio_handle);
+    ~MainWindow();
 
 signals:
     void request_update_at(QModelIndex);
@@ -67,7 +68,7 @@ private:
     std::map<std::string, podcast> channels;
     std::mutex seek_bar_lock;
     std::mutex daemon_lock;
-    audio_interface &_audio_handle;
+    thread_safe_interface<audio_abstraction> audio_handle;
     UserDesiredState state;
     std::string open_channel;
     std::string home_path;
