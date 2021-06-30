@@ -1,7 +1,7 @@
 #include <exception>
 #include <stdexcept>
 
-#include <QPixmap>
+//#include <QPixmap>
 
 #include "episode.hpp"
 #include "shared/string_functions.hpp"
@@ -151,7 +151,7 @@ std::string episode::get_title() const {
 bool episode::has_title(const std::string &text) const {
     return title == text;
 }
-
+/*
 void episode::populate(int row, QStandardItemModel *model, std::string directory) const {
     QModelIndex index = model->index(row,0);
 
@@ -216,7 +216,7 @@ void episode::populate_download_progress(int row, QStandardItemModel *model) con
         }
     }
 }
-
+*/
 void episode::serialize_into(std::ofstream &file) {
     file << "\"item\" : {\n";
     file << "\t\"enclosure\": {\n\t\t\"<xmlattr>\": { \"url\" : \"" << audio_url << "\"}\n\t},\n";

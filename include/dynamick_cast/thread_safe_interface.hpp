@@ -14,11 +14,6 @@ private:
 
     std::unique_ptr<Facade> implementation;
 
-    
-    thread_safe_interface(std::unique_ptr<Facade> implementation)
-        : implementation(std::move(implementation)) {
-    }
-
     Facade & get_ref() noexcept {
         return *implementation;
     }
@@ -28,6 +23,10 @@ private:
     }
 
     Facade volatile & get_vol_ref() noexcept {
+        return *implementation;
+    }
+
+    Facade const volatile & get_cv_ref() const noexcept {
         return *implementation;
     }
 
@@ -47,6 +46,10 @@ public:
 
     thread_safe_interface(thread_safe_interface const &) = delete;
     thread_safe_interface &operator=(thread_safe_interface const &) = delete;
+
+    thread_safe_interface(std::unique_ptr<Facade> implementation)
+        : implementation(std::move(implementation)) {
+    }
 
     ~thread_safe_interface() = default;
 

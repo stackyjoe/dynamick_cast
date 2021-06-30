@@ -5,9 +5,6 @@
 #include <iostream>
 #include <mutex>
 
-#include <QModelIndex>
-#include <QStandardItemModel>
-#include <QString>
 
 #include <boost/property_tree/ptree.hpp>
 #include <pugixml.hpp>
@@ -25,8 +22,8 @@ public:
     std::shared_ptr<download_shared_state> get_download_rights();
     std::string get_title() const;
     bool has_title(const std::string &text) const;
-    void populate(int row, QStandardItemModel *model, std::string directory) const;
-    void populate_download_progress(int row, QStandardItemModel *model) const;
+    //void populate(int row, QStandardItemModel *model, std::string directory) const;
+    //void populate_download_progress(int row, QStandardItemModel *model) const;
     void serialize_into(std::ofstream &file);
     std::string get_sanitized_file_name() const noexcept;
 

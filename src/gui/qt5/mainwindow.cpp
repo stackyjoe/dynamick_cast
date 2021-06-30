@@ -156,7 +156,7 @@ void MainWindow::download(podcast &cur_pod,
         throw std::invalid_argument("Can't find given episode title in the current podcast.");
 
     auto download_rights = ep->get_download_rights();
-    download_rights->set_index(index);
+    //download_rights->set_index(index);
 
     auto maybe_lock = download_rights->try_lock();
 
@@ -166,7 +166,7 @@ void MainWindow::download(podcast &cur_pod,
 
     auto * model = static_cast<QStandardItemModel*>(this->ui->episodeView->model());
 
-    auto gui_callback = [this, download_rights, podcast_title = cur_pod.title(), episode_title, ep, model](QModelIndex &index) mutable -> void {
+    auto gui_callback = [this, download_rights, podcast_title = cur_pod.title(), episode_title, ep, model,index]() mutable -> void {
 
         if(index.isValid() and this->open_channel == podcast_title and ep->get_title() == episode_title.toStdString() ) {
             model->setData(index, QVariant{}, Qt::DecorationRole);
@@ -336,7 +336,7 @@ void MainWindow::fetch_rss(std::string url) {
             if( !was_inserted ) {
                 // TODO: update ui->episodeView
                 if(open_channel == title)
-                    itr->second.populate(ui->episodeView, project_directory );
+                    populate(ui->episodeView, project_directory, std::addressof(itr->second));
                 std::cout << "Assigned " << title << std::endl;
                 return;
             }
@@ -355,8 +355,8 @@ void MainWindow::load_subscriptions() {
     }
 
     try {
-        boost::property_tree::ptree tree;
-        boost::property_tree::read_json(save_file, tree);
+        //boost::property_tree::ptree tree;
+        //boost::property_tree::read_json(save_file, tree);
 
         std::map<std::string, podcast> new_channels;
 
@@ -474,7 +474,7 @@ void MainWindow::set_active_channel(const QModelIndex &index) {
 
     podcast &pod = itr->second;
 
-    pod.populate(ui->episodeView, project_directory);
+    populate(ui->episodeView, project_directory, std::addressof(pod));
 }
 
 bool MainWindow::set_seek_bar_position(float percent) {
@@ -571,7 +571,7 @@ void MainWindow::sync_ui_with_download_state() {
     }
 
     auto &p = kv_pair->second;
-    p.populate_download_progress(ui->episodeView);
+    populate_download_progress(ui->episodeView, std::addressof(p));
     emit requestEpisodeViewUpdate();
 }
 
@@ -590,7 +590,7 @@ void MainWindow::sync_ui_with_library_state() {
     ui->episodeView->model()->removeRows(0, ui->episodeView->model()->rowCount());
     if(auto itr = channels.find(open_channel); itr != channels.end()) {
         auto &pod = itr->second;
-        pod.populate(ui->episodeView, project_directory);
+        populate(ui->episodeView, project_directory, std::addressof(pod));
     }
 
     ui->episodeView->update();
@@ -620,9 +620,9 @@ void MainWindow::podcastViewContextMenu(QPoint p) {
         auto & podcast = itr->second;
         auto rss_url = podcast.rss_url();
 
-        fmt::print("RSS URL={}\n", rss_url);
+//        fmt::print("RSS URL={}\n", rss_url);
 
-        menu.addAction(QString("Fetch RSS"),
+        menu.addAction(QString("Update feed"),
                        [this, url=rss_url](){
                             this->fetch_rss(url);
                         }
@@ -659,5 +659,95 @@ void MainWindow::episodeViewContextMenu(QPoint p) {
         menu.addAction(QString("Delete file"), [this, &index](){this->remove_local_file(index);});
         menu.addAction(QString("Play"), [this, &index](){this->download_or_play(index);});
         menu.exec(ui->episodeView->mapToGlobal(p));
+    }
+}
+
+void MainWindow::populate(QTableView* view, std::string project_directory, podcast *podcast) {
+    auto * model = static_cast<QStandardItemModel *>(tableview->model());
+    if(int count { model->rowCount() }; count > 0)
+        model->removeRows(0,model->rowCount());
+
+    model->insertRows(0, static_cast<int>(items.size()));
+
+    for(size_t i = 0; i < items.size(); ++i) {
+        populate(static_cast<int>(i), model, directory + podcast->_title + "/"s, std::addressof(items[i]));
+    }
+
+}
+
+void MainWindow::populate_episode(int row, QStandardItemModel *model, std::string directory, episode * ep) {
+    auto &shared_state = ep->shared_state;
+    QModelIndex index = model->index(row,0);
+
+    if(index.isValid()) {
+        auto maybe_lock = shared_state->try_lock();
+        if(maybe_lock.has_value()) {
+            auto file_name = get_sanitized_file_name();
+            std::fstream file{directory+file_name};
+            if(file.good()) {
+                auto item = model->itemFromIndex(index);
+                if(item != nullptr){
+                    item->setData(QVariant(), Qt::UserRole);
+                    item->setData(QVariant(), Qt::DecorationRole);
+                    item->setData(QVariant(), Qt::DisplayRole);
+                }
+                model->setData(index, QIcon(":/package.svg").pixmap(QSize(16,16)), Qt::DecorationRole);
+            }
+            else {
+
+                model->setData(index, QIcon(":/hexagon.svg").pixmap(QSize(16,16)), Qt::DecorationRole);
+            }
+        }
+        else {
+            // Someone must be downloading
+
+
+            double percent = 100.0*shared_state->get_bytes_completed() / std::max(1.0,static_cast<double>(shared_state->get_bytes_total()));
+            model->setData(index, QVariant{}, Qt::DecorationRole);
+            model->setData(index,
+                           shared_state->get_bytes_total() > 0 ?
+                               QString::number(percent, 'f', 1) + QString::fromLocal8Bit("%",1) :
+                               QString::number(shared_state->get_bytes_completed()/1000000) + QString::fromLocal8Bit("MB",2),
+                           Qt::DisplayRole);
+        }
+    }
+
+    index = model->index(row,1);
+
+    if(index.isValid() and not model->setData(index, QString::number(item_number_in_xml), Qt::DisplayRole) )
+        fmt::print("Failed to add item number {}.\n", item_number_in_xml);
+
+    index = model->index(row,2);
+
+    if(index.isValid() and not model->setData(index, QString::fromStdString(title), Qt::DisplayRole))
+            fmt::print("Failed to add {} to episodeView\n", title);
+}
+
+void MainWindow::populate_download_progress(int row, QStandardItemModel *model, episode *ep) {
+    QModelIndex index = model->index(row,0);
+
+    auto &shared_state = ep->shared_state;
+
+    if(index.isValid()) {
+        auto maybe_lock = shared_state->try_lock();
+        if(not maybe_lock.has_value()) {
+
+            double percent = 100.0*shared_state->get_bytes_completed() / std::max(1.0,static_cast<double>(shared_state->get_bytes_total()));
+
+            model->setData(index,
+                           shared_state->get_bytes_total() > 0 ?
+                               QString::number(percent, 'f', 1) + QString::fromLocal8Bit("%",1) :
+                               QString::number(shared_state->get_bytes_completed()/1000000) + QString::fromLocal8Bit("MB",2),
+                           Qt::DisplayRole);
+        }
+    }
+}
+
+void MainWindow::populate_download_progress(podcast *pod) {
+        // Brittle! Should verify that the size of the tableview is correct.
+    auto * model = static_cast<QStandardItemModel *>(tableview->model());
+
+    for(size_t i = 0; i < items.size(); ++i) {
+        populate_download_progress(static_cast<int>(i), model, std::addressof(items[i]));
     }
 }

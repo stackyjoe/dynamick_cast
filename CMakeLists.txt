@@ -3,8 +3,28 @@ set(CMAKE_CXX_STANDARD 17)
 
 project(dynamick_cast)
 
-set(USE_SFML ON)
-set(USE_SFML_MP3_EXPERIMENTAL ON)
+if(NOT DEFINED USE_SFML)
+    set(USE_SFML ON)
+endif()
+
+if(NOT DEFINED USE_SFML_MP3_EXPERIMENTAL)
+    set(USE_SFML_MP3_EXPERIMENTAL ON)
+    add_compile_definitions(USE_SFML_MP3_EXPERIMENTAL)
+endif()
+
+if(NOT DEFINED USE_DEAR_IMGUI)
+    set(USE_DEAR_IMGUI ON)
+endif()
+
+if(NOT DEFINED TIDY)
+    set(TIDY No)
+endif()
+
+if(NOT DEFINED STRICT)
+    set(STRICT No)
+endif()
+
+
 
 include_directories(./include ./src ./lib)
 

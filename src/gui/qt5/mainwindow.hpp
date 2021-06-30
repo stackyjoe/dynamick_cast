@@ -10,7 +10,6 @@
 
 //#include "ui_mainwindow.h"
 
-#include "dynamick_cast/thread_safe_interface.hpp"
 #include "audio/audio_abstraction.hpp"
 #include "library/podcast.hpp"
 #include "networking/getter.hpp"
@@ -21,13 +20,8 @@ namespace Ui {
 class MainWindow;
 }
 
-class MainWindow : public QMainWindow
-{
+class MainWindow : public QMainWindow {
     Q_OBJECT
-
-public:
-    explicit MainWindow(thread_safe_interface<audio_abstraction> &&audio_handle);
-    ~MainWindow();
 
 signals:
     void request_update_at(QModelIndex);
@@ -50,6 +44,13 @@ private:
     void fetch_rss(std::string url);
     void load_subscriptions();
     void on_play_button_clicked();
+    void populate_episode_view();
+    void populate(QTableView* view, std::string project_directory, podcast *podcast);
+    void populate_episode(int row, QStandardItemModel *model, std::string directory, episode * ep);
+    void populate_download_progress(int row, QStandardItemModel *model, episode *ep);
+    void populate_download_progress(QTableView *tableview, podcast *pod);
+
+
     [[noreturn]] void quit();
     void remove_local_file(const QModelIndex &index);
     void remove_local_files(std::string channel_name);
@@ -58,10 +59,7 @@ private:
     void set_active_channel(const QModelIndex &podcast_index);
     bool set_seek_bar_position(float percent);
     void set_up_connections();
-    void sync_audio_with_library_state();
-    void sync_ui_with_audio_state();
-    void sync_ui_with_download_state();
-    void sync_ui_with_library_state();
+
 
 
     std::unique_ptr<Ui::MainWindow> ui;
@@ -79,6 +77,14 @@ private:
     std::atomic<int> volume;
 
     static constexpr size_t maximum_allowed_bytes_between_updates = 100000;
+
+    public: 
+    explicit MainWindow(thread_safe_interface<audio_abstraction> &&audio_handle);
+    ~MainWindow();
+    void sync_audio_with_library_state();
+    void sync_ui_with_audio_state();
+    void sync_ui_with_download_state();
+    void sync_ui_with_library_state();
 
 };
 

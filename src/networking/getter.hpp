@@ -23,6 +23,7 @@ public:
     //                                 std::function<void(size_t, size_t)> &&progress_handler,
     //                                 std::function<void(boost::beast::error_code const &, size_t, beastly_connection &)> &&completion_handler);
 
+    std::unique_ptr<beastly_connection> make_connection(parsed_url uri);
 
     [[nodiscard]] std::future<bool> get(std::string url,
              std::function<void(size_t, size_t)> progress_handler,

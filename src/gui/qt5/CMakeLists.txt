@@ -5,7 +5,7 @@ set(CMAKE_AUTORCC ON)
 
 add_library(qt5_gui_implementation OBJECT)
 
-target_sources(qt5_gui_implementation PRIVATE mainwindow.cpp mainwindow.hpp download_shared_state.cpp download_shared_state.hpp)
+target_sources(qt5_gui_implementation PRIVATE qt_wrapper.cpp qt_wrapper.hpp mainwindow.cpp mainwindow.hpp download_shared_state.cpp download_shared_state.hpp)
 target_sources(qt5_gui_implementation PRIVATE resources.qrc mainwindow.ui )
 
 #use Qt

@@ -1,5 +1,8 @@
 #include <fmt/core.h>
 
+//#include <QPersistentModelIndex>
+
+
 #include "download_shared_state.hpp"
 
 download_shared_state::download_shared_state()
@@ -7,8 +10,8 @@ download_shared_state::download_shared_state()
       lock_storage(std::nullopt),
       completed_bytes(0),
       bytes_since_last_gui_update(0),
-      total_bytes(std::nullopt),
-      index_storage(std::nullopt)
+      total_bytes(std::nullopt)
+//,      index_storage(std::nullopt)
 {
 
 }
@@ -29,6 +32,7 @@ size_t download_shared_state::get_bytes_total() const noexcept {
     return total_bytes.has_value()? *total_bytes : 0;
 }
 
+/*
 std::optional<QModelIndex> download_shared_state::get_index() const noexcept {
     if(index_storage.has_value()) {
         if(not index_storage->isValid()) {
@@ -39,13 +43,10 @@ std::optional<QModelIndex> download_shared_state::get_index() const noexcept {
     }
 
     return std::nullopt;
-}
+}*/
 
 void download_shared_state::request_gui_update() const {
-    auto index = get_index();
-    if(index.has_value())
-
-    gui_callback(index.value());
+    gui_callback();
 }
 
 void download_shared_state::set_bytes_completed(size_t bytes) noexcept {
@@ -57,13 +58,15 @@ void download_shared_state::set_bytes_total(size_t bytes) noexcept {
         total_bytes.emplace(bytes);
 }
 
-void download_shared_state::set_gui_callback(std::function<void (QModelIndex&)> &&callback) noexcept{
+void download_shared_state::set_gui_callback(std::function<void ()> &&callback) noexcept{
     gui_callback = callback;
 }
 
+/*
 void download_shared_state::set_index(QModelIndex index) {
     index_storage.emplace(index);
 }
+*/
 
 std::optional<std::unique_lock<std::mutex>> download_shared_state::try_lock() const noexcept {
 
