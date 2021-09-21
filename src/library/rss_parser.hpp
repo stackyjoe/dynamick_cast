@@ -10,7 +10,7 @@ class rss_parser
 public:
 
     class xml_in_rss {
-        std::string const & whole_rss_file;
+        std::string whole_rss_file;
         size_t lpos;
         size_t rpos;
 
@@ -41,15 +41,17 @@ private:
     const xml_in_rss contents;
 
 public:
-    podcast parse() const {
+    podcast parse(std::string backup_url) const {
         auto xml = contents.xml_portion();
+
+        //fmt::print("XML: \n{}\n", xml);
 
         auto p = podcast(std::string{});
         pugi::xml_document doc;
 
         doc.load_buffer(xml.begin(), xml.size());
 
-        p.fill_from_xml(doc);
+        p.fill_from_xml(doc, backup_url);
 
         return p;
     }

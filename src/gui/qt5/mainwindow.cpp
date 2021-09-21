@@ -300,15 +300,18 @@ void MainWindow::download_or_play(const QModelIndex &index) {
 }
 
 void MainWindow::fetch_rss(std::string url) {
+    fmt::print("fetch_rss({})\n", url);
+
     auto f = get.get(url,
                        []([[maybe_unused]] size_t read, [[maybe_unused]] size_t total){ return;},
-                       [this, ui = ui.get()](boost::beast::error_code const & ec, [[maybe_unused]] size_t bytes_read, beastly_connection &res){
+                       [this, ui = ui.get(), url](boost::beast::error_code const & ec, [[maybe_unused]] size_t bytes_read, beastly_connection &res){
             if(ec) {
                 fmt::print("An exception occurred: {}\n", ec.message());
                 return;
             }
 
-            auto podcast = rss_parser(res.take_body()).parse();
+            auto rss = rss_parser(res.take_body());
+            auto podcast = rss.parse(url);
             auto title = podcast.title();
 
             auto [itr, was_inserted] = channels.insert_or_assign(title, std::move(podcast));
@@ -362,7 +365,7 @@ void MainWindow::load_subscriptions() {
         auto end = tree.end();
         for(auto root = tree.begin(); root != end; ++root) {
             podcast channel(root->first);
-            channel.fill_from_xml(root->second);
+            channel.fill_from_xml(root->second, channel.title());
             new_channels.insert_or_assign(channel.title(), std::move(channel));
         }
 
@@ -618,8 +621,9 @@ void MainWindow::podcastViewContextMenu(QPoint p) {
 
         auto & podcast = itr->second;
         auto rss_url = podcast.rss_url();
+        
 
-//        fmt::print("RSS URL={}\n", rss_url);
+        fmt::print("RSS URL={}\n", podcast.rss_url());
 
         menu.addAction(QString("Update feed"),
                        [this, url=rss_url](){

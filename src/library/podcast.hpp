@@ -24,8 +24,8 @@ public:
     size_t episode_count() const noexcept;
     std::string const * find_url(const std::string &title);
     void fill_from_json(boost::property_tree::ptree &parsed_json);
-    void fill_from_xml(boost::property_tree::ptree &parsed_xml);
-    void fill_from_xml(pugi::xml_document &parsed_xml);
+    void fill_from_xml(boost::property_tree::ptree &parsed_xml, std::string backup_url);
+    void fill_from_xml(pugi::xml_document &parsed_xml, std::string backup_url);
     episode * get_episode(const std::string &title);
     //void populate(QTableView* view, std::string project_directory);
     //void populate_download_progress(QTableView* view);

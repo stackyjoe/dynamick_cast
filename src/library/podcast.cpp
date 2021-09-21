@@ -13,7 +13,7 @@ size_t podcast::episode_count() const noexcept {
     return items.size();
 }
 
-void podcast::fill_from_xml(boost::property_tree::ptree &parsed_xml) {
+void podcast::fill_from_xml(boost::property_tree::ptree &parsed_xml, std::string backup_url) {
     auto itr = parsed_xml.begin();
     auto end = itr->second.end();
     itr = itr->second.begin();
@@ -59,8 +59,6 @@ void podcast::fill_from_xml(boost::property_tree::ptree &parsed_xml) {
     if(itr == end)
         throw std::invalid_argument("constructor of podcast class called with inappropriate xml argument.");
 
-    std::string podcast_title(itr->second.data());
-
     size_t item_number = 0;
     while(itr != end) {
         if(itr->first == "item") {
@@ -75,9 +73,12 @@ void podcast::fill_from_xml(boost::property_tree::ptree &parsed_xml) {
         ++item_number;
         ++itr;
     }
+    
+    if(rss_feed_url.empty())
+        rss_feed_url = backup_url;
 }
 
-void podcast::fill_from_xml(pugi::xml_document &parsed_xml) {
+void podcast::fill_from_xml(pugi::xml_document &parsed_xml, std::string backup_url) {
     auto itr = parsed_xml.children().begin()->begin();
     auto end = parsed_xml.children().begin()->end();
 
@@ -188,6 +189,9 @@ void podcast::fill_from_xml(pugi::xml_document &parsed_xml) {
         ++item_number;
         ++itr;
     }
+
+    if(rss_feed_url.empty())
+        rss_feed_url = backup_url;
 
 }
 
