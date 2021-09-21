@@ -30,7 +30,7 @@ public:
     //void populate(QTableView* view, std::string project_directory);
     //void populate_download_progress(QTableView* view);
     void serialize_into(std::ofstream &file);
-    const std::string & title();
+    const std::string & title() const;
     std::string rss_url();
 
     std::vector<episode> const & peek_items() const noexcept;

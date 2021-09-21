@@ -260,7 +260,7 @@ void podcast::serialize_into(std::ofstream &file) {
     // printing ",\n" is the responsibility of mainwindow, unfortunately.
 }
 
-const std::string & podcast::title() {
+const std::string & podcast::title() const {
     return _title;
 }
 

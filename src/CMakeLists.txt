@@ -18,6 +18,8 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${SHARED_CXX_FLAGS} -O2"
 #Add executable target
 add_executable(main main.cpp)
 
+set_property(TARGET main PROPERTY POSITION_INDEPENDENT_CODE ON)
+
 add_subdirectory(audio)
 add_subdirectory(gui)
 add_subdirectory(library)
@@ -31,10 +33,6 @@ target_link_libraries (main PRIVATE fmt)
 
 target_include_directories (main PRIVATE audio gui library shared networking)
 target_link_libraries ( main PRIVATE audio gui library networking shared)
-
-#target_link_libraries( main PRIVATE dear_imgui_gui_implementation
-#    sfml_mp3_implementation
-#    sfml_audio_implementation)
 
 target_include_directories(main PRIVATE "/usr/local/include")
 target_link_directories( main PRIVATE "/usr/local/lib")

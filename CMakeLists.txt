@@ -12,8 +12,12 @@ if(NOT DEFINED USE_SFML_MP3_EXPERIMENTAL)
     add_compile_definitions(USE_SFML_MP3_EXPERIMENTAL)
 endif()
 
+if(NOT DEFINED USE_QT5)
+    set(USE_QT5 ON)
+endif()
+
 if(NOT DEFINED USE_DEAR_IMGUI)
-    set(USE_DEAR_IMGUI ON)
+    set(USE_DEAR_IMGUI OFF)
 endif()
 
 if(NOT DEFINED TIDY)

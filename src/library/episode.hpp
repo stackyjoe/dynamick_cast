@@ -19,7 +19,7 @@ public:
     explicit episode(size_t item_number, pugi::xml_node::iterator iterator);
 
     const std::string &url() const;
-    std::shared_ptr<download_shared_state> get_download_rights();
+    std::shared_ptr<download_shared_state> get_download_rights() const;
     std::string get_title() const;
     bool has_title(const std::string &text) const;
     //void populate(int row, QStandardItemModel *model, std::string directory) const;

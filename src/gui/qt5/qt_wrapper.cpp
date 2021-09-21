@@ -1,10 +1,11 @@
 #include "qt_wrapper.hpp"
 
-qt_wrapper::qt_wrapper(int &argc, char **argv, thread_safe_interface<audio_abstraction> &&audio_handle)
+
+qt_wrapper::qt_wrapper(int argc, char **argv, thread_safe_interface<audio_abstraction> &&audio_handle)
     : app(argc,argv), window(std::move(audio_handle)) {
 
     }
-
+    
 void qt_wrapper::sync_audio_with_library_state() {
     window.sync_audio_with_library_state();
 }

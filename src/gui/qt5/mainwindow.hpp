@@ -2,18 +2,23 @@
 #define MAINWINDOW_HPP
 
 #include <QContextMenuEvent>
+#include <QDir>
 #include <QMainWindow>
+#include <QTableView>
+#include <QStandardItemModel>
 
 #include <future>
 #include <map>
 #include <thread>
 
-//#include "ui_mainwindow.h"
+#include "dynamick_cast/thread_safe_interface.hpp"
 
 #include "audio/audio_abstraction.hpp"
 #include "library/podcast.hpp"
 #include "networking/getter.hpp"
 #include "shared/user_desired_state.hpp"
+
+#include "ui_mainwindow.h"
 
 
 namespace Ui {
@@ -45,10 +50,10 @@ private:
     void load_subscriptions();
     void on_play_button_clicked();
     void populate_episode_view();
-    void populate(QTableView* view, std::string project_directory, podcast *podcast);
-    void populate_episode(int row, QStandardItemModel *model, std::string directory, episode * ep);
-    void populate_download_progress(int row, QStandardItemModel *model, episode *ep);
-    void populate_download_progress(QTableView *tableview, podcast *pod);
+    void populate(QTableView* tableview, std::string project_directory, podcast const * podcast);
+    void populate_episode(int row, QStandardItemModel *model, std::string directory, episode const * ep);
+    void populate_download_progress(int row, QStandardItemModel *model, episode const *ep);
+    void populate_download_progress(podcast const *pod);
 
 
     [[noreturn]] void quit();
@@ -79,7 +84,43 @@ private:
     static constexpr size_t maximum_allowed_bytes_between_updates = 100000;
 
     public: 
-    explicit MainWindow(thread_safe_interface<audio_abstraction> &&audio_handle);
+    MainWindow() = default;
+
+    explicit MainWindow(thread_safe_interface<audio_abstraction> &&audio_handle)
+    :
+    QMainWindow(nullptr),
+    ui(std::make_unique<Ui::MainWindow>()),
+    audio_handle(std::move(audio_handle)),
+    state(UserDesiredState::stop),
+    home_path(QDir::homePath().toStdString()),
+    native_separator(std::string("")+QDir::separator().toLatin1()),
+    project_directory(home_path + std::string("/.local/share/applications/dynamick-cast/")),
+    daemon(
+        [this](){
+            while(1) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+                this->sync_audio_with_library_state();
+                this->sync_ui_with_audio_state();
+            }
+        }),
+    volume(100)
+{
+    ui->setupUi(this);
+    showMaximized();
+
+    auto * podcast_item_model = new QStandardItemModel;
+    QStringList headers { QString {"Podcast title"} };
+    podcast_item_model->setHorizontalHeaderLabels(std::move(headers));
+    ui->podcastView->setModel(podcast_item_model);
+
+    auto * episode_item_model = new QStandardItemModel;
+    QStringList ep_headers { QStringList { QString {""}, QString{"Newness"}, QString {"Episode title"} } };
+    episode_item_model->setHorizontalHeaderLabels(ep_headers);
+    ui->episodeView->setModel(episode_item_model);
+
+    set_up_connections();
+}
     ~MainWindow();
     void sync_audio_with_library_state();
     void sync_ui_with_audio_state();
@@ -87,5 +128,6 @@ private:
     void sync_ui_with_library_state();
 
 };
+
 
 #endif // MAINWINDOW_HPP

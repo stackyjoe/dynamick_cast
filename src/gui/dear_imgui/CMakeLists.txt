@@ -17,8 +17,7 @@ target_sources(dear_imgui_gui_implementation PUBLIC
     ${imgui_directory}/backends/imgui_impl_opengl3.h
     ${imgui_directory}/backends/imgui_impl_opengl3.cpp
     ${imgui_directory}/backends/imgui_impl_sdl.cpp
-    ${imgui_directory}/backends/imgui_impl_sdl.h
-    ${imgui_directory}/examples/libs/gl3w/GL/gl3w.c)
+    ${imgui_directory}/backends/imgui_impl_sdl.h)
 
 target_link_libraries(dear_imgui_gui_implementation PUBLIC GL SDL2)
 

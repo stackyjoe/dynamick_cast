@@ -10,7 +10,7 @@
 
 class qt_wrapper : public gui_abstraction {
     public:
-    qt_wrapper(int &argc, char **argv, thread_safe_interface<audio_abstraction> &&audio_handle);
+    qt_wrapper(int argc, char **argv, thread_safe_interface<audio_abstraction> &&audio_handle);
 
     void sync_audio_with_library_state() override;
     void sync_ui_with_audio_state() override;

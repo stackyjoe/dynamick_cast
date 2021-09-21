@@ -10,8 +10,16 @@ class QModelIndex;
 class download_shared_state
 {
 public:
-    download_shared_state();
+    download_shared_state()
+    : mtx(),
+      lock_storage(std::nullopt),
+      completed_bytes(0),
+      bytes_since_last_gui_update(0),
+      total_bytes(std::nullopt)
+    //,      index_storage(std::nullopt)
+    {
 
+    }
     download_shared_state(download_shared_state const &) = delete;
     download_shared_state &operator=(download_shared_state const &) = delete;
 

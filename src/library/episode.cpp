@@ -140,7 +140,7 @@ const std::string &episode::url() const {
     return audio_url;
 }
 
-std::shared_ptr<download_shared_state> episode::get_download_rights() {
+std::shared_ptr<download_shared_state> episode::get_download_rights() const {
     return shared_state;
 }
 

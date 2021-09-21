@@ -5,16 +5,6 @@
 
 #include "download_shared_state.hpp"
 
-download_shared_state::download_shared_state()
-    : mtx(),
-      lock_storage(std::nullopt),
-      completed_bytes(0),
-      bytes_since_last_gui_update(0),
-      total_bytes(std::nullopt)
-//,      index_storage(std::nullopt)
-{
-
-}
 
 void download_shared_state::adopt_lock(std::unique_lock<std::mutex> &&lock) noexcept {
     lock_storage.emplace(std::move(lock));
