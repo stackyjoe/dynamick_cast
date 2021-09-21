@@ -5,11 +5,12 @@ set(CMAKE_AUTORCC ON)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-add_library(qt5_gui_implementation STATIC resources.qrc mainwindow.ui mainwindow.cpp mainwindow.hpp)
+add_library(qt5_gui_implementation SHARED resources.qrc mainwindow.ui mainwindow.hpp)
 
 target_sources(qt5_gui_implementation PUBLIC)
 
-set(qt_gui_sources qt_wrapper.cpp qt_wrapper.hpp 
+set(qt_gui_sources mainwindow.cpp 
+    qt_wrapper.cpp qt_wrapper.hpp 
     download_shared_state.cpp download_shared_state.hpp)
 
 list(TRANSFORM qt_gui_sources PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/")

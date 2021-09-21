@@ -1,0 +1,58 @@
+Performing C SOURCE FILE Test CMAKE_HAVE_LIBC_PTHREAD failed with the following output:
+Change Dir: /usr/home/joe/coding/DynamickCast/dynamick_cast/out/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/local/bin/gmake -f Makefile cmTC_50445/fast && /usr/local/bin/gmake  -f CMakeFiles/cmTC_50445.dir/build.make CMakeFiles/cmTC_50445.dir/build
+gmake[1]: Entering directory '/usr/home/joe/coding/DynamickCast/dynamick_cast/out/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_50445.dir/src.c.o
+/usr/bin/cc -DCMAKE_HAVE_LIBC_PTHREAD   -MD -MT CMakeFiles/cmTC_50445.dir/src.c.o -MF CMakeFiles/cmTC_50445.dir/src.c.o.d -o CMakeFiles/cmTC_50445.dir/src.c.o -c /usr/home/joe/coding/DynamickCast/dynamick_cast/out/CMakeFiles/CMakeTmp/src.c
+Linking C executable cmTC_50445
+/usr/local/bin/cmake -E cmake_link_script CMakeFiles/cmTC_50445.dir/link.txt --verbose=1
+/usr/bin/cc CMakeFiles/cmTC_50445.dir/src.c.o -o cmTC_50445 
+ld: error: undefined symbol: pthread_create
+>>> referenced by src.c
+>>>               CMakeFiles/cmTC_50445.dir/src.c.o:(main)
+cc: error: linker command failed with exit code 1 (use -v to see invocation)
+gmake[1]: *** [CMakeFiles/cmTC_50445.dir/build.make:100: cmTC_50445] Error 1
+gmake[1]: Leaving directory '/usr/home/joe/coding/DynamickCast/dynamick_cast/out/CMakeFiles/CMakeTmp'
+gmake: *** [Makefile:127: cmTC_50445/fast] Error 2
+
+
+Source file was:
+#include <pthread.h>
+
+static void* test_func(void* data)
+{
+  return data;
+}
+
+int main(void)
+{
+  pthread_t thread;
+  pthread_create(&thread, NULL, test_func, NULL);
+  pthread_detach(thread);
+  pthread_cancel(thread);
+  pthread_join(thread, NULL);
+  pthread_atfork(NULL, NULL, NULL);
+  pthread_exit(NULL);
+
+  return 0;
+}
+
+Determining if the function pthread_create exists in the pthreads failed with the following output:
+Change Dir: /usr/home/joe/coding/DynamickCast/dynamick_cast/out/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/local/bin/gmake -f Makefile cmTC_12c23/fast && /usr/local/bin/gmake  -f CMakeFiles/cmTC_12c23.dir/build.make CMakeFiles/cmTC_12c23.dir/build
+gmake[1]: Entering directory '/usr/home/joe/coding/DynamickCast/dynamick_cast/out/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_12c23.dir/CheckFunctionExists.c.o
+/usr/bin/cc   -DCHECK_FUNCTION_EXISTS=pthread_create -MD -MT CMakeFiles/cmTC_12c23.dir/CheckFunctionExists.c.o -MF CMakeFiles/cmTC_12c23.dir/CheckFunctionExists.c.o.d -o CMakeFiles/cmTC_12c23.dir/CheckFunctionExists.c.o -c /usr/local/share/cmake/Modules/CheckFunctionExists.c
+Linking C executable cmTC_12c23
+/usr/local/bin/cmake -E cmake_link_script CMakeFiles/cmTC_12c23.dir/link.txt --verbose=1
+/usr/bin/cc  -DCHECK_FUNCTION_EXISTS=pthread_create CMakeFiles/cmTC_12c23.dir/CheckFunctionExists.c.o -o cmTC_12c23  -lpthreads 
+ld: error: unable to find library -lpthreads
+cc: error: linker command failed with exit code 1 (use -v to see invocation)
+gmake[1]: *** [CMakeFiles/cmTC_12c23.dir/build.make:100: cmTC_12c23] Error 1
+gmake[1]: Leaving directory '/usr/home/joe/coding/DynamickCast/dynamick_cast/out/CMakeFiles/CMakeTmp'
+gmake: *** [Makefile:127: cmTC_12c23/fast] Error 2
+
+
+

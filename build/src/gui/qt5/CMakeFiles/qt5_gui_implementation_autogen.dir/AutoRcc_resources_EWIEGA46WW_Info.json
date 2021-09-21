@@ -1,0 +1,29 @@
+{
+	"BUILD_DIR" : "/home/joe/coding/DynamickCast/dynamick_cast/build/src/gui/qt5/qt5_gui_implementation_autogen",
+	"CMAKE_BINARY_DIR" : "/home/joe/coding/DynamickCast/dynamick_cast/build",
+	"CMAKE_CURRENT_BINARY_DIR" : "/home/joe/coding/DynamickCast/dynamick_cast/build/src/gui/qt5",
+	"CMAKE_CURRENT_SOURCE_DIR" : "/home/joe/coding/DynamickCast/dynamick_cast/src/gui/qt5",
+	"CMAKE_SOURCE_DIR" : "/home/joe/coding/DynamickCast/dynamick_cast",
+	"INCLUDE_DIR" : "/home/joe/coding/DynamickCast/dynamick_cast/build/src/gui/qt5/qt5_gui_implementation_autogen/include",
+	"INPUTS" : 
+	[
+		"/home/joe/coding/DynamickCast/dynamick_cast/lib/icons/pause.svg",
+		"/home/joe/coding/DynamickCast/dynamick_cast/lib/icons/skip-forward.svg",
+		"/home/joe/coding/DynamickCast/dynamick_cast/lib/icons/package.svg",
+		"/home/joe/coding/DynamickCast/dynamick_cast/lib/icons/skip-back.svg",
+		"/home/joe/coding/DynamickCast/dynamick_cast/lib/icons/play.svg",
+		"/home/joe/coding/DynamickCast/dynamick_cast/lib/icons/check-square.svg",
+		"/home/joe/coding/DynamickCast/dynamick_cast/lib/icons/hexagon.svg",
+		"/home/joe/coding/DynamickCast/dynamick_cast/lib/icons/loader.svg"
+	],
+	"LOCK_FILE" : "/home/joe/coding/DynamickCast/dynamick_cast/build/src/gui/qt5/CMakeFiles/qt5_gui_implementation_autogen.dir/AutoRcc_resources_EWIEGA46WW_Lock.lock",
+	"MULTI_CONFIG" : false,
+	"OPTIONS" : [ "-name", "resources" ],
+	"OUTPUT_CHECKSUM" : "EWIEGA46WW",
+	"OUTPUT_NAME" : "qrc_resources.cpp",
+	"RCC_EXECUTABLE" : "/usr/local/lib/qt5/bin/rcc",
+	"RCC_LIST_OPTIONS" : [ "--list" ],
+	"SETTINGS_FILE" : "/home/joe/coding/DynamickCast/dynamick_cast/build/src/gui/qt5/CMakeFiles/qt5_gui_implementation_autogen.dir/AutoRcc_resources_EWIEGA46WW_Used.txt",
+	"SOURCE" : "/home/joe/coding/DynamickCast/dynamick_cast/src/gui/qt5/resources.qrc",
+	"VERBOSITY" : 0
+}
