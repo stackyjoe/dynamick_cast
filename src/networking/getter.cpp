@@ -128,7 +128,6 @@ void getter::coro_download(std::string url,
             case http::status::moved_permanently: {
                 parsed = parse(network_resources->parser().base()["Location"].to_string());
                 continue;
-
             }
             default: {
                 fmt::print("Received unexpected HTTP status: {}\n", status);

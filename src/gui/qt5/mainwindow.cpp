@@ -658,7 +658,7 @@ void MainWindow::episodeViewContextMenu(QPoint p) {
     if(QModelIndex index = ui->episodeView->indexAt(p); index.isValid()) {
         QMenu menu { ui->episodeView->indexWidget(index) };
 
-        menu.addAction(QString("Download"), [this, &index](){std::thread t([this, &index](){this->download(index);}); t.detach();});
+        menu.addAction(QString("Download"), [ui=this, &index](){ui->get.post([ui, &index](){ui->download(index);});});
         menu.addAction(QString("Delete file"), [this, &index](){this->remove_local_file(index);});
         menu.addAction(QString("Play"), [this, &index](){this->download_or_play(index);});
         menu.exec(ui->episodeView->mapToGlobal(p));
