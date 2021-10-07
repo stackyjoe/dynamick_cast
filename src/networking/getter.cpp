@@ -73,6 +73,7 @@ void getter::coro_download(std::string url,
     boost::beast::error_code ec;
     auto protocols = {ssl::context::tlsv11, ssl::context::tlsv12, ssl::context::tlsv13};
     constexpr size_t max_redirects = 10;
+        
     auto parsed = parse(url);
 
     if(parsed.host.empty()) {
@@ -91,7 +92,7 @@ void getter::coro_download(std::string url,
         return;
     }
 
-    fmt::print("Getting the header.\n");
+    //fmt::print("Getting the header.\n");
 
     // Find the file + get a length hint to use later.
     for(size_t i = 0; i < max_redirects; ++i) {
@@ -140,11 +141,15 @@ void getter::coro_download(std::string url,
 
     network_resources.release();
 
+    //fmt::print("Trying to do actual connection\n");
+
     network_resources = make_connection(parsed);
     if(!network_resources) {
         fmt::print("Was not able to set up an SSL connection.\n");
         return;
     }
+
+    //fmt::print("made connection after getting header\n");
 
     auto print_time_taken_since = [](auto start_time) {
             auto end_time = get_time_stamp();
@@ -155,6 +160,8 @@ void getter::coro_download(std::string url,
 
     // At this point we've found the true url and (possibly) gotten a size hint. We just need to download the file!
     for(size_t i = 0; i < max_redirects; ++i) {
+
+        fmt::print("Attempting with redirect {}\n", i);
 
         auto const start_time = get_time_stamp();
         
@@ -218,13 +225,19 @@ void getter::coro_download(std::string url,
 
         }
         break_read_loop:;
+
+        network_resources.release();
+
+        network_resources = make_connection(parsed);
+        if(!network_resources) {
+            fmt::print("Was not able to set up an SSL connection.\n");
+            return;
+        }
     }
 
 final_attempt:
-    network_resources.release();
-//    fmt::print("Final attempt: {}://{}:{}{}\n", parsed.protocol, parsed.host, parsed.port, parsed.path);
+    fmt::print("Final attempt: {}://{}:{}{}\n", parsed.protocol, parsed.host, parsed.port, parsed.path);
 
-    network_resources = make_connection(parsed);
 
     auto const start_time = get_time_stamp();
 
@@ -257,7 +270,7 @@ final_attempt:
         progress_handler(completed, length_hint);
     }
 
-
+    fmt::print("coro_download completed\n");
 }
 
 std::future<bool> getter::get(std::string url,

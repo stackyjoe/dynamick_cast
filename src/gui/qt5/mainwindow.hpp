@@ -14,7 +14,7 @@
 #include "dynamick_cast/thread_safe_interface.hpp"
 
 #include "audio/audio_abstraction.hpp"
-#include "library/podcast.hpp"
+#include "library/library.hpp"
 #include "networking/getter.hpp"
 #include "shared/user_desired_state.hpp"
 
@@ -68,7 +68,7 @@ private:
 
 
     std::unique_ptr<Ui::MainWindow> ui;
-    std::map<std::string, podcast> channels;
+    library channels;
     std::mutex seek_bar_lock;
     std::mutex daemon_lock;
     thread_safe_interface<audio_abstraction> audio_handle;

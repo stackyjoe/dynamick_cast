@@ -9,15 +9,11 @@
 #include <QTimer>
 
 #include <boost/iostreams/stream.hpp>
-#include <boost/property_tree/json_parser.hpp>
-#include <boost/property_tree/xml_parser.hpp>
-#include <pugixml.hpp>
 
 #include <filesystem>
 
 #include <fmt/core.h>
 
-#include "library/episode.hpp"
 #include "gui/qt5/mainwindow.hpp"
 #include "library/rss_parser.hpp"
 #include "shared/string_functions.hpp"
@@ -104,8 +100,8 @@ void MainWindow::closeEvent([[maybe_unused]] QCloseEvent *ev) {
 }
 
 void MainWindow::download(const QModelIndex &index) {
-    auto itr = channels.find(open_channel);
-    if(itr == channels.end()) {
+    auto maybe_podcast = channels.find(open_channel);
+    if(maybe_podcast == nullptr) {
         return;
     }
 
@@ -113,7 +109,7 @@ void MainWindow::download(const QModelIndex &index) {
     auto index_holding_data = model->index(index.row(), 2);
 
     QString episode_title = index_holding_data.data(Qt::DisplayRole).toString();
-    podcast & cur_pod = itr->second;
+    podcast & cur_pod = *maybe_podcast;
     //std::string const * url = cur_pod.find_url(episode_title.toStdString());
     episode *ep = cur_pod.get_episode(episode_title.toStdString());
     if(ep == nullptr) {
@@ -207,11 +203,11 @@ void MainWindow::download(podcast &cur_pod,
         output_file.close();
 
         auto r = this->channels.find(pod_name);
-        if(r == this->channels.end() or r->first != this->open_channel) {
+        if(r == nullptr or pod_name != this->open_channel) {
             return;
         }
-        auto &pod = r->second;
-        auto * ep = pod.get_episode(pod_name);
+        
+        auto * ep = r->get_episode(pod_name);
         if(ep == nullptr) {
             return;
         }
@@ -225,7 +221,7 @@ void MainWindow::download(podcast &cur_pod,
 
         auto index = list.first();
 
-        populate_episode(index->row(), model, project_directory+r->first+native_separator, ep);
+        populate_episode(index->row(), model, project_directory+pod_name+native_separator, ep);
         download_rights->request_gui_update();
 
     };
@@ -235,12 +231,12 @@ void MainWindow::download(podcast &cur_pod,
 
 void MainWindow::download_or_play(const QModelIndex &index) {
 
-    auto itr = channels.find(open_channel);
-    if(itr == channels.end())
+    auto maybe_podcast = channels.find(open_channel);
+    if(maybe_podcast == nullptr)
         return;
 
     QString episode_title = index.data(Qt::DisplayRole).toString();
-    podcast & cur_pod = itr->second;
+    podcast & cur_pod = *maybe_podcast;
     //std::string const * url = cur_pod.find_url(episode_title.toStdString());
     auto * episode = cur_pod.get_episode(episode_title.toStdString());
     if(episode == nullptr)
@@ -357,24 +353,7 @@ void MainWindow::load_subscriptions() {
     }
 
     try {
-        boost::property_tree::ptree tree;
-        boost::property_tree::read_json(save_file, tree);
-
-        std::map<std::string, podcast> new_channels;
-
-        auto end = tree.end();
-        for(auto root = tree.begin(); root != end; ++root) {
-            podcast channel(root->first);
-            channel.fill_from_xml(root->second, channel.title());
-            new_channels.insert_or_assign(channel.title(), std::move(channel));
-        }
-
-        channels = std::move(new_channels);
-
-        for(auto &[name, channel] : channels)
-            std::cout << "Loaded channel: " << name << " with " << channel.episode_count() << " episodes." << std::endl;
-
-
+        channels.fill_from_xml(save_file);
         sync_ui_with_library_state();
     }
     catch(const std::exception &e) {
@@ -388,12 +367,12 @@ void MainWindow::load_subscriptions() {
 }
 
 void MainWindow::remove_local_file(const QModelIndex &index) {
-    auto itr = channels.find(open_channel);
-    if(itr == channels.end())
+    auto maybe_podcast = channels.find(open_channel);
+    if(maybe_podcast == nullptr)
         return;
 
     QString episode_title = index.data(Qt::DisplayRole).toString();
-    podcast & cur_pod = itr->second;
+    podcast & cur_pod = *maybe_podcast;
     std::string const * url = cur_pod.find_url(episode_title.toStdString());
 
     if(url == nullptr)
@@ -430,25 +409,7 @@ void MainWindow::save_subscriptions() {
             return;
         }
 
-        save_file << "{\n";
-        auto ch_itr = channels.begin();
-        auto early_end = std::next(channels.end(),-1);
-
-        while(ch_itr != early_end) {
-            auto &[url, channel] = *ch_itr;
-            (void)url;// Can't use [[maybe_unused]] attribute with structured bindings.
-            save_file << "\"channel\" : {\n";
-            channel.serialize_into(save_file);
-            save_file << "},\n";
-            ++ch_itr;
-        }
-        auto &[url, channel] = *ch_itr;
-        (void)url; // Can't use [[maybe_unused]] attribute with structured bindings.
-        save_file << "\"channel\" : {\n";
-        channel.serialize_into(save_file);
-        save_file << "}\n";
-
-        save_file << "}";
+        channels.serialize_into(save_file);
         save_file.close();
     }
     catch(const std::exception &e) {
@@ -468,15 +429,13 @@ void MainWindow::seek() {
 void MainWindow::set_active_channel(const QModelIndex &index) {
     std::string channel_name = index.data(Qt::DisplayRole).toString().toStdString();
 
-    auto itr = channels.find(channel_name);
-    if(itr == channels.end())
+    auto maybe_podcast = channels.find(channel_name);
+    if(maybe_podcast == nullptr)
         return;
 
     open_channel = channel_name;
 
-    podcast &pod = itr->second;
-
-    populate(ui->episodeView, project_directory, std::addressof(pod));
+    populate(ui->episodeView, project_directory, maybe_podcast);
 }
 
 bool MainWindow::set_seek_bar_position(float percent) {
@@ -567,13 +526,12 @@ void MainWindow::sync_ui_with_audio_state() {
 }
 
 void MainWindow::sync_ui_with_download_state() {
-    auto kv_pair = channels.find(open_channel);
-    if(kv_pair == channels.end()) {
+    auto maybe_podcast = channels.find(open_channel);
+    if(maybe_podcast == nullptr) {
         return;
     }
 
-    auto &p = kv_pair->second;
-    populate_download_progress(std::addressof(p));
+    populate_download_progress(maybe_podcast);
     emit requestEpisodeViewUpdate();
 }
 
@@ -590,9 +548,8 @@ void MainWindow::sync_ui_with_library_state() {
     }
 
     ui->episodeView->model()->removeRows(0, ui->episodeView->model()->rowCount());
-    if(auto itr = channels.find(open_channel); itr != channels.end()) {
-        auto &pod = itr->second;
-        populate(ui->episodeView, project_directory, std::addressof(pod));
+    if(auto maybe_podcast = channels.find(open_channel); maybe_podcast != nullptr) {
+        populate(ui->episodeView, project_directory, maybe_podcast);
     }
 
     ui->episodeView->update();
@@ -617,13 +574,15 @@ void MainWindow::podcastViewContextMenu(QPoint p) {
         auto podcast_name = index.data(Qt::DisplayRole).toString().toStdString();
 
 
-        auto itr = channels.find(podcast_name);
+        auto maybe_podcast = channels.find(podcast_name);
 
-        auto & podcast = itr->second;
-        auto rss_url = podcast.rss_url();
+        if(maybe_podcast == nullptr)
+            return;
+
+        auto rss_url = maybe_podcast->rss_url();
         
 
-        fmt::print("RSS URL={}\n", podcast.rss_url());
+        fmt::print("RSS URL={}\n", rss_url);
 
         menu.addAction(QString("Update feed"),
                        [this, url=rss_url](){
@@ -631,22 +590,19 @@ void MainWindow::podcastViewContextMenu(QPoint p) {
                         }
         );
 
-        menu.addAction(QString("Remove podcast"),
-                       [this, itr, row=index.row()](){
-                            std::string channel_name = itr->first;
-                            this->channels.erase(itr);
+        menu.addAction(QString("Remove podcast and local files"),
+                       [this, podcast_name, row=index.row()](){
+                            this->channels.erase(podcast_name);
                             this->ui->podcastView->model()->removeRow(row);
-                            this->remove_local_files(channel_name);
+                            this->remove_local_files(podcast_name);
                         }
         );
 
         menu.addAction(QString("Remove local files"),
-                       [this, itr](){
-                            std::thread t([this, itr](){
-                                std::string channel_name = itr->first;
-                                this->remove_local_files(channel_name);
+                       [this, podcast_name](){
+                            this->get.post([this, podcast_name](){
+                                this->remove_local_files(podcast_name);
                             });
-                            t.detach();
                         }
         );
 

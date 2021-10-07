@@ -11,7 +11,7 @@ target_sources(qt5_gui_implementation PUBLIC)
 
 set(qt_gui_sources mainwindow.cpp 
     qt_wrapper.cpp qt_wrapper.hpp 
-    download_shared_state.cpp download_shared_state.hpp)
+    download_shared_state.hpp)
 
 list(TRANSFORM qt_gui_sources PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/")
 

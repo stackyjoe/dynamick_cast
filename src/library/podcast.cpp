@@ -209,28 +209,6 @@ episode * podcast::get_episode(const std::string &title) {
         return nullptr;
     return &*results;
 }
-/*
-void podcast::populate(QTableView *tableview, std::string directory) {
-    auto * model = static_cast<QStandardItemModel *>(tableview->model());
-    if(int count { model->rowCount() }; count > 0)
-        model->removeRows(0,model->rowCount());
-
-    model->insertRows(0, static_cast<int>(items.size()));
-
-    for(size_t i = 0; i < items.size(); ++i) {
-        items[i].populate(static_cast<int>(i), model, directory + _title + "/"s);
-    }
-}
-
-void podcast::populate_download_progress(QTableView *tableview) {
-    // Brittle! Should verify that the size of the tableview is correct.
-    auto * model = static_cast<QStandardItemModel *>(tableview->model());
-
-    for(size_t i = 0; i < items.size(); ++i) {
-        items[i].populate_download_progress(static_cast<int>(i), model);
-    }
-}
-*/
 
 void podcast::serialize_into(std::ofstream &file) {
     file << "\"" << rss_feed_url << "\" : {\n";

@@ -9,7 +9,7 @@
 #include <boost/property_tree/ptree.hpp>
 #include <pugixml.hpp>
 
-#include "gui/qt5/download_shared_state.hpp"
+#include "download_shared_state.hpp"
 #include "shared/string_functions.hpp"
 
 class episode
