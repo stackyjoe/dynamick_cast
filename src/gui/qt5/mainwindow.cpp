@@ -186,11 +186,10 @@ void MainWindow::download(podcast &cur_pod,
             size_t bytes_read,
             beastly_connection &resources) mutable -> void {
 
-        fmt::print("Attempting to clear the lock.\n");
         download_rights->clear_lock();
 
         if(ec or bytes_read == 0) {
-            fmt::print("Error code or no bytes read. {}\n", ec.message());
+            fmt::print("bytes read: {}\nError code message:  {}\n", bytes_read, ec.message());
             download_rights->request_gui_update();
             return;
         }
@@ -353,7 +352,7 @@ void MainWindow::load_subscriptions() {
     }
 
     try {
-        channels.fill_from_xml(save_file);
+        channels.fill_from_json(save_file);
         sync_ui_with_library_state();
     }
     catch(const std::exception &e) {

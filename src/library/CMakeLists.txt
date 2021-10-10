@@ -6,7 +6,7 @@ target_sources(library PRIVATE episode.cpp  episode.hpp
     library.cpp library.hpp
     download_shared_state.cpp download_shared_state.hpp
     rss_parser.hpp)
-target_link_libraries(library PUBLIC networking)
+target_link_libraries(library PUBLIC networking boost_json)
 
 # use pugixml
 find_package(pugiXML REQUIRED)

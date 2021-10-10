@@ -19,10 +19,6 @@ public:
     getter();
     ~getter();
 
-    //std::future<bool> async_download(std::string url,
-    //                                 std::function<void(size_t, size_t)> &&progress_handler,
-    //                                 std::function<void(boost::beast::error_code const &, size_t, beastly_connection &)> &&completion_handler);
-
     std::unique_ptr<beastly_connection> make_connection(parsed_url uri);
 
     template<class Callable>
@@ -33,11 +29,6 @@ public:
     [[nodiscard]] std::future<bool> get(std::string url,
              std::function<void(size_t, size_t)> progress_handler,
              std::function<void(boost::beast::error_code const &, size_t, beastly_connection &)> completion_handler);
-
-    // returns size of requested file (if that is in the header provided by the server)
-    // and also returns url to file
-    //std::tuple<size_t, std::string> sync_get_header(std::string url);
-    //std::tuple<size_t, std::string> sync_get_header(parsed_url url);
 
 private:
     void coro_download(std::string url,

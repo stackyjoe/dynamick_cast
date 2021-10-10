@@ -54,7 +54,7 @@ std::unique_ptr<beastly_connection> getter::make_connection(parsed_url uri) {
             }
             else {
                 network_resources.release();
-                fmt::print("Algorithm ID {}: An error occurred attempting to set up SSL: {}\n", p, ec.message());
+                // fmt::print("Algorithm ID {}: An error occurred attempting to set up SSL: {}\n", p, ec.message());
             }
         }
     }
@@ -81,7 +81,7 @@ void getter::coro_download(std::string url,
         return;
     }
 
-    size_t length_hint = 0;
+    size_t length_hint = 100000000;
 
     std::unique_ptr<beastly_connection> network_resources;
 
@@ -91,6 +91,9 @@ void getter::coro_download(std::string url,
         fmt::print("Was not able to set up an SSL connection.\n");
         return;
     }
+
+    network_resources->set_parser_body_limit(length_hint);
+
 
     //fmt::print("Getting the header.\n");
 
@@ -119,7 +122,7 @@ void getter::coro_download(std::string url,
             case http::status::ok: {
                 //std::cout << "HTTP status is OK" << std::endl;
                 auto s = network_resources->parser().base()["Content-Length"].to_string();
-                length_hint = s.empty()? 0 : std::stoi(s);
+                length_hint = s.empty()? 10000000 : std::stoi(s);
                 break;
             }
             case http::status::found: {
@@ -144,10 +147,16 @@ void getter::coro_download(std::string url,
     //fmt::print("Trying to do actual connection\n");
 
     network_resources = make_connection(parsed);
+
     if(!network_resources) {
         fmt::print("Was not able to set up an SSL connection.\n");
         return;
     }
+
+    fmt::print("Length hint: {}\n", length_hint);
+
+    network_resources->set_parser_body_limit(length_hint);
+
 
     //fmt::print("made connection after getting header\n");
 
@@ -165,20 +174,21 @@ void getter::coro_download(std::string url,
 
         auto const start_time = get_time_stamp();
         
-
-        network_resources->set_parser_body_limit(length_hint);
         std::string cleaned_host_name = parsed.host + ":" + parsed.port;
-
 
         http::request<http::string_body> file_req {http::verb::get, parsed.total_path, 11};
         file_req.set(http::field::host, cleaned_host_name.c_str());
         file_req.set(http::field::user_agent, BOOST_BEAST_VERSION_STRING);
 
         network_resources->write_request(std::move(file_req), yield_ctx[ec]);
+
         if(ec) {
             fmt::print("write_request failed: {}\n", ec.message());
             return;
         }
+
+        network_resources->set_parser_body_limit(length_hint);
+
 
         size_t completed = 0;
         while(1) {
@@ -187,6 +197,8 @@ void getter::coro_download(std::string url,
             if(ec || network_resources->parser_is_done()) {
                 auto status = network_resources->get_status();
                 parsed_url old = parsed;
+
+                fmt::print("status: {}\n", static_cast<int>(status));
 
                 switch(status) {
                     case http::status::ok: {
@@ -229,6 +241,9 @@ void getter::coro_download(std::string url,
         network_resources.release();
 
         network_resources = make_connection(parsed);
+        network_resources->set_parser_body_limit(length_hint);
+
+
         if(!network_resources) {
             fmt::print("Was not able to set up an SSL connection.\n");
             return;
@@ -241,7 +256,6 @@ final_attempt:
 
     auto const start_time = get_time_stamp();
 
-    network_resources->set_parser_body_limit(length_hint);
 
     http::request<http::string_body> file_req {http::verb::get, parsed.total_path, 11};
     std::string cleaned_host_name = parsed.host + ":" + parsed.port;

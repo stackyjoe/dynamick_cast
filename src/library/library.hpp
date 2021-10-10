@@ -6,7 +6,7 @@
 struct library {
 private:
     std::map<std::string, podcast> channels;
-    static constexpr int version = 0;
+    static constexpr int version = 2;
 
 public:
 
@@ -25,11 +25,15 @@ public:
     podcast * find(std::string const &name) noexcept;
     podcast const * find(std::string const &name) const noexcept;
 
+    boost::json::value to_json() const noexcept;
+
     void erase(std::string const &name);
 
     std::pair<iterator, bool> insert_or_assign(std::string const &key, podcast && value);
 
+    void serialize_as_json(std::ofstream &save_file);
     void serialize_into(std::ofstream &save_file);
-    void fill_from_xml(std::ifstream &save_file);
+    //void fill_from_xml(std::ifstream &save_file);
+    void fill_from_json(std::ifstream &save_file);
 
 };

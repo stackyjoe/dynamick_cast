@@ -13,69 +13,23 @@ size_t podcast::episode_count() const noexcept {
     return items.size();
 }
 
-void podcast::fill_from_xml(boost::property_tree::ptree &parsed_xml, std::string backup_url) {
-    auto itr = parsed_xml.begin();
-    auto end = itr->second.end();
-    itr = itr->second.begin();
+podcast podcast::deserialize_from(boost::json::value const &val) {
+    auto const & obj = val.as_object();
+    podcast value{std::string()};
 
-    while(itr != end) {
-        switch(hash(itr->first.c_str())) {
-        case hash("rss_feed_url"):
-            if(itr->first == "rss_feed_url")
-                rss_feed_url = itr->second.data();
-            break;
-        case hash("title"):
-            if(itr->first == "title")
-                _title = itr->second.data();
-            break;
-        case hash("author"):
-            if(itr->first == "author")
-                _author = itr->second.data();
-            break;
-        case hash("lastBuildDate"):
-            if(itr->first == "lastBuildDate")
-                _last_build_date = itr->second.data();
-            break;
-        case hash("managingEditor"):
-            if(itr->first == "managingEditor")
-                _managing_editor = itr->second.data();
-            break;
-        case hash("itunes:summary"):
-            if(itr->first == "itunes:summary")
-                _summary = itr->second.data();
-            break;
-        case hash("item"):
-            if(itr->first == "item")
-                goto parse_items;
-            break;
-        default:
-            break;
-        }
-    ++itr;
-    }
+    boost::hana::for_each(value.member_field_name_pairs_for_serialization(),[obj](auto pair){
+        auto * member = boost::hana::first(pair);
+        auto field_name = boost::hana::second(pair);
 
-    parse_items:
+        auto itr = obj.find(field_name);
 
-    if(itr == end)
-        throw std::invalid_argument("constructor of podcast class called with inappropriate xml argument.");
+        if(itr == obj.end())
+            throw std::runtime_error("Field not found");
 
-    size_t item_number = 0;
-    while(itr != end) {
-        if(itr->first == "item") {
-            try {
-                items.emplace_back(episode(item_number, itr));
-            }
-            catch(std::exception &e) {
-                std::cout << "An exception has occurred: " << e.what();
-            }
-        }
+        deserialize(member, itr->value());
+    });
 
-        ++item_number;
-        ++itr;
-    }
-    
-    if(rss_feed_url.empty())
-        rss_feed_url = backup_url;
+    return value;
 }
 
 void podcast::fill_from_xml(pugi::xml_document &parsed_xml, std::string backup_url) {
@@ -210,36 +164,15 @@ episode * podcast::get_episode(const std::string &title) {
     return &*results;
 }
 
-void podcast::serialize_into(std::ofstream &file) {
-    file << "\"" << rss_feed_url << "\" : {\n";
-    file << "\"author\": \"" << _author << "\",\n";
-    file << "\"lastBuildDate\": \"" << _last_build_date << "\",\n";
-    file << "\"managingEditor\": \"" << _managing_editor << "\",\n";
-    // TODO(joe): sanitize summary field.
-    file << "\"summary\": \"" << " "/*_summary.toStdString()*/ << "\",\n";
-    file << "\"title\": \"" << sanitize(_title) << "\",\n";
-    file << "\"guid\": \"" << _guid << "\",\n";
-    file << "\"rss_feed_url\": \"" << rss_feed_url << "\",\n";
+void podcast::serialize_into(boost::json::value & val) const {
+    auto &obj = val.emplace_object();
+    boost::hana::for_each(member_field_name_pairs_for_serialization(), [&obj](auto pair) mutable -> void {
+        auto const * member = boost::hana::first(pair);
+        auto field_name = boost::hana::second(pair);
 
-    if(items.empty()) {
-        file << "}\n";
-        return;
-    }
+        serialize(member, obj[field_name]);
+    });
 
-    auto ep_itr = items.begin();
-    auto early_end = items.end()-1;
-
-    while(ep_itr != early_end) {
-        ep_itr->serialize_into(file);
-        file << ",\n";
-        ++ep_itr;
-    }
-
-    ep_itr->serialize_into(file);
-    file << "\n";
-
-    file << "}";
-    // printing ",\n" is the responsibility of mainwindow, unfortunately.
 }
 
 const std::string & podcast::title() const {
