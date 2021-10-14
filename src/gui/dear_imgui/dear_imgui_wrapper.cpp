@@ -4,8 +4,6 @@
 #include <fmt/core.h>
 
 #include <boost/iostreams/stream.hpp>
-#include <boost/property_tree/json_parser.hpp>
-#include <boost/property_tree/xml_parser.hpp>
 
 #include "imgui/imgui.h"
 #include "imgui/backends/imgui_impl_sdl.h"
@@ -13,6 +11,14 @@
 #include "imgui/backends/imgui_impl_opengl3_loader.h"
 
 #include "dear_imgui_wrapper.hpp"
+
+#include "library/rss_parser.hpp"
+#include "shared/string_functions.hpp"
+#include "networking/url_parser.hpp"
+
+#include "dynamick_cast/generic_exception_handling.hpp"
+#include "dynamick_cast/debug_print.hpp"
+
 
 using namespace std::string_literals;
 
@@ -246,9 +252,21 @@ void dear_imgui_wrapper::run() {
                 ImGui::Text("Podcasts");
 
                 for(auto & [name, podcast] : channels) {
-                    ImGui::TableNextColumn();
-                    if(ImGui::Button(name.c_str())) {
-                        open_channel = name;
+                    ImGui::Selectable(name.c_str());
+                    if(ImGui::BeginPopupContextItem()) {
+                        if(ImGui::Button("View episodes")) {
+                            open_channel = name;
+                        }
+                        if(ImGui::Button("Update feed")) {
+                            fetch_rss(podcast.rss_url());
+                        }
+                        if(ImGui::Button("Remove local files")) {
+
+                        }
+                        if(ImGui::Button("Unsubscribe and remove local files")) {
+
+                        }
+                        ImGui::EndPopup();
                     }
                 }
 
@@ -268,12 +286,20 @@ void dear_imgui_wrapper::run() {
                     if(result_itr != nullptr) {
                         auto &pod = *result_itr;
                         for(auto &ep : pod.peek_items()) {
-                            if(ImGui::Button(ep.get_title().c_str())) {
-                                cur_ep = std::addressof(ep);
-                                download_or_play(ep);
+                            ImGui::Selectable(ep.get_title().c_str());
+                            if(ImGui::BeginPopupContextItem()) {
+                                if(ImGui::Button("Play / Download")) {
+                                    cur_ep = std::addressof(ep);
+                                    download_or_play(ep);
+                                }
+                                if(ImGui::Button("Delete file")) {
+                                        std::filesystem::path file(project_directory + open_channel + native_separator + ep.get_sanitized_file_name());
+                                        std::error_code ec;
+                                        std::filesystem::remove(file,ec);
+                                }
+                                ImGui::EndPopup();
                             }
                         }
-
                     }
 
 
@@ -301,7 +327,7 @@ void dear_imgui_wrapper::run() {
 }
 
 void dear_imgui_wrapper::load_subscriptions() noexcept {
-    fmt::print("Loading subscriptions.\n");
+    debug_print("Loading subscriptions.\n");
     std::string file_path = project_directory + "subscriptions.json"s;
     std::ifstream save_file(file_path, std::ios::in);
 
@@ -317,9 +343,32 @@ void dear_imgui_wrapper::load_subscriptions() noexcept {
     catch(const std::exception &e) {
         // Leave map in empty state.
         
-        fmt::print("An exception occurred: {}\n", e.what());
+        notify_and_ignore(e);
     }    
 }
+
+void dear_imgui_wrapper::fetch_rss(std::string url) {
+        auto f = get.get(url,
+                       []([[maybe_unused]] size_t read, [[maybe_unused]] size_t total){ return;},
+                       [this, url](boost::beast::error_code const & ec, [[maybe_unused]] size_t bytes_read, beastly_connection &res){
+            if(ec) {
+                fmt::print("An exception occurred: {}\n", ec.message());
+                return;
+            }
+
+            auto rss = rss_parser(res.take_body());
+            auto podcast = rss.parse(url);
+            auto title = podcast.title();
+
+            auto [itr, was_inserted] = this->channels.insert_or_assign(title, std::move(podcast));
+
+            if( !was_inserted ) {
+                debug_print("Assigned {}\n", title);
+            }
+        }
+    );
+}
+
 
 void dear_imgui_wrapper::download_or_play(episode const & ep) {
     std::string title = ep.get_title();

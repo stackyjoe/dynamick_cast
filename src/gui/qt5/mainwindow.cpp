@@ -13,6 +13,7 @@
 #include <filesystem>
 
 #include <fmt/core.h>
+#include <cstdio>
 
 #include "gui/qt5/mainwindow.hpp"
 #include "library/rss_parser.hpp"
@@ -131,7 +132,7 @@ void MainWindow::download(const QModelIndex &index) {
         download(cur_pod, episode_title, url, local_path, index.row(), index);
     }
     catch(std::exception const &e) {
-        std::cout << "An exception occurred: " << e.what() << std::endl;
+        fmt::print("An exception occurred: {}\n", e.what());
     }
 }
 
@@ -143,7 +144,6 @@ void MainWindow::download(podcast &cur_pod,
                           QModelIndex index) {
 
 
-//    fmt::print("Downloading url: {}\n", url);
     episode * ep = cur_pod.get_episode(episode_title.toStdString());
 
     if(ep == nullptr)
@@ -186,10 +186,16 @@ void MainWindow::download(podcast &cur_pod,
             size_t bytes_read,
             beastly_connection &resources) mutable -> void {
 
+        fmt::print("Beginning completion handler\n");
+        std::fflush(stdout);
+
         download_rights->clear_lock();
 
         if(ec or bytes_read == 0) {
-            fmt::print("bytes read: {}\nError code message:  {}\n", bytes_read, ec.message());
+            fmt::print("Bytes read: {}\nError code message:  {}\n",
+                bytes_read,
+                ec.message());
+
             download_rights->request_gui_update();
             return;
         }
@@ -280,7 +286,7 @@ void MainWindow::download_or_play(const QModelIndex &index) {
             download(cur_pod, episode_title, url, local_path, index.row(), index);
         }
         catch(std::exception const &e) {
-            std::cout << e.what() << std::endl;
+            fmt::print("An exception occurred: {}\n", e.what());
             return;
         }
 
@@ -295,7 +301,6 @@ void MainWindow::download_or_play(const QModelIndex &index) {
 }
 
 void MainWindow::fetch_rss(std::string url) {
-    fmt::print("fetch_rss({})\n", url);
 
     auto f = get.get(url,
                        []([[maybe_unused]] size_t read, [[maybe_unused]] size_t total){ return;},
@@ -334,7 +339,7 @@ void MainWindow::fetch_rss(std::string url) {
                 // TODO: update ui->episodeView
                 if(open_channel == title)
                     populate(ui->episodeView, project_directory, std::addressof(itr->second));
-                std::cout << "Assigned " << title << std::endl;
+                debug_print("Assigned {}\n", title);
                 return;
             }
         }
@@ -342,7 +347,6 @@ void MainWindow::fetch_rss(std::string url) {
 }
 
 void MainWindow::load_subscriptions() {
-    fmt::print("Loading subscriptions.\n");
     std::string file_path = project_directory + "subscriptions.json"s;
     std::ifstream save_file(file_path, std::ios::in);
 
@@ -356,7 +360,7 @@ void MainWindow::load_subscriptions() {
         sync_ui_with_library_state();
     }
     catch(const std::exception &e) {
-        std::cout << "An exception occurred: " << e.what() << std::endl;
+        fmt::print("An exception occurred: {}\n", e.what());
     }    
 }
 
@@ -412,7 +416,7 @@ void MainWindow::save_subscriptions() {
         save_file.close();
     }
     catch(const std::exception &e) {
-        std::cout << "An exception occurred: " << e.what() << std::endl;
+        fmt::print("An exception occurred: {}\n", e.what());
     }
 
     return;

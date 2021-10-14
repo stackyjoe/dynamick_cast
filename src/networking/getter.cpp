@@ -81,7 +81,7 @@ void getter::coro_download(std::string url,
         return;
     }
 
-    size_t length_hint = 100000000;
+    size_t length_hint = 0;
 
     std::unique_ptr<beastly_connection> network_resources;
 
@@ -92,13 +92,12 @@ void getter::coro_download(std::string url,
         return;
     }
 
-    network_resources->set_parser_body_limit(length_hint);
-
-
-    //fmt::print("Getting the header.\n");
+    parsed_url old;
 
     // Find the file + get a length hint to use later.
     for(size_t i = 0; i < max_redirects; ++i) {
+        fmt::print("Attempting to get header, redirect {}\n", i);
+
         http::request<http::string_body> hdr_req {http::verb::head, parsed.total_path, 11};
         std::string cleaned_host_name = parsed.host + ":" + parsed.port;
 
@@ -117,20 +116,26 @@ void getter::coro_download(std::string url,
         }
 
         auto status = network_resources->get_status();
+        old = parsed;
 
         switch(status) {
             case http::status::ok: {
-                //std::cout << "HTTP status is OK" << std::endl;
+                fmt::print("\tok\n");
                 auto s = network_resources->parser().base()["Content-Length"].to_string();
-                length_hint = s.empty()? 10000000 : std::stoi(s);
-                break;
+                length_hint = s.empty()? beastly_connection::default_download_limit : std::max(beastly_connection::default_download_limit,std::stoul(s));
+                goto try_to_get;
             }
             case http::status::found: {
                 parsed = parse(network_resources->parser().base()["Location"].to_string());
+                if(parsed == old)
+                    goto try_to_get;
+                
                 continue;
             }
             case http::status::moved_permanently: {
                 parsed = parse(network_resources->parser().base()["Location"].to_string());
+                if(old == parsed)
+                    goto try_to_get;
                 continue;
             }
             default: {
@@ -142,9 +147,9 @@ void getter::coro_download(std::string url,
 
     }
 
-    network_resources.release();
+try_to_get:
 
-    //fmt::print("Trying to do actual connection\n");
+    network_resources.release();
 
     network_resources = make_connection(parsed);
 
@@ -153,12 +158,11 @@ void getter::coro_download(std::string url,
         return;
     }
 
-    fmt::print("Length hint: {}\n", length_hint);
+    length_hint = std::max(beastly_connection::default_download_limit, length_hint);
 
     network_resources->set_parser_body_limit(length_hint);
 
-
-    //fmt::print("made connection after getting header\n");
+    fmt::print("Length hint: {}\n", length_hint);
 
     auto print_time_taken_since = [](auto start_time) {
             auto end_time = get_time_stamp();
@@ -187,14 +191,14 @@ void getter::coro_download(std::string url,
             return;
         }
 
-        network_resources->set_parser_body_limit(length_hint);
-
-
         size_t completed = 0;
         while(1) {
             size_t bytes_read = network_resources->async_read_some(yield_ctx[ec]);
 
-            if(ec || network_resources->parser_is_done()) {
+            if(ec) {
+                fmt::print("error.\n");
+            }
+            if(network_resources->parser_is_done()) {
                 auto status = network_resources->get_status();
                 parsed_url old = parsed;
 
@@ -273,7 +277,10 @@ final_attempt:
     while(1) {
         size_t bytes_read = network_resources->async_read_some(yield_ctx[ec]);
 
-        if(ec || network_resources->parser_is_done()) {
+        if(ec) {
+            fmt::print("error\n");
+        }
+        if(network_resources->parser_is_done()) {
             completion_handler(ec, bytes_read, *network_resources);
             print_time_taken_since(start_time);
             promise.set_value(true);

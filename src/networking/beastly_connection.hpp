@@ -17,7 +17,6 @@
 class beastly_connection
 {
 private:
-    static constexpr size_t default_download_limit = 1024*1024*128;
 
     parsed_url url;
     boost::asio::ip::tcp::socket socket_;
@@ -28,6 +27,9 @@ private:
     std::promise<bool> promise;
 
 public:
+    static constexpr size_t default_download_limit = 1024*1024*128;
+
+
     beastly_connection(parsed_url url,
                        boost::asio::io_context &io_context,
                        boost::asio::ip::tcp::resolver &resolver);

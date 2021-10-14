@@ -71,7 +71,7 @@ void audiere_wrapper::play() {
     if(decoder.get() == nullptr)
         return;
 
-    std::cout << "Audiere backend attempting to play." << std::endl;
+    fmt::print("Audiere backend attempting to play.\n");
 
     decoder->setRepeat(false);
     decoder->play();
@@ -89,8 +89,8 @@ bool audiere_wrapper::open_from_file(const std::string &path) {
     audiere::OutputStream * os = audiere::OpenSound(device, path.c_str(), true);
     if(os == nullptr) {
         if(device.get() == nullptr)
-            std::cout << "Null audio device.\n";
-        std::cout << "Unable to open sound file:" << path << ".\n";
+            fmt::print("Null audio device.\n");
+        fmt::"Unable to open sound file: {}\n", path);
         return false;
     }
 

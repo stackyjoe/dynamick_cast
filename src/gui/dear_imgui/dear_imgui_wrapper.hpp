@@ -28,6 +28,9 @@ class dear_imgui_wrapper : public gui_abstraction {
 
     void load_subscriptions() noexcept;
 
+    void fetch_rss(std::string url);
+
+
 private:
     thread_safe_interface<audio_abstraction> audio_handle;
     SDL_Window * window;

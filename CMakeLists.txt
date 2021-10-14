@@ -4,6 +4,7 @@ set(CMAKE_CXX_STANDARD 17)
 project(dynamick_cast)
 
 if(USE_SFML)
+    message(STATUS "Using SFML")
     add_compile_definitions(USE_SFML)
 
     if((NOT DEFINED USE_SFML_MP3) OR (USE_SFML_MP3 STREQUAL ON) OR (USE_SFML_MP3 STREQUAL Yes))
@@ -13,11 +14,13 @@ if(USE_SFML)
 endif()
 
 if((USE_QT5 STREQUAL ON) OR (USE_QT5 STREQUAL Yes))
+    message(STATUS "Using Qt5.")
     set(USE_QT5 ON)
     add_compile_definitions(USE_QT5)
 endif()
 
 if((USE_DEAR_IMGUI STREQUAL ON) OR (USE_DEAR_IMGUI STREQUAL Yes))
+    message(STATUS "Using Dear ImGui.")
     set(USE_DEAR_IMGUI ON)
     add_compile_definitions(USE_DEAR_IMGUI)
 endif()
