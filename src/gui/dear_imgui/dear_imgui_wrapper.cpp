@@ -23,11 +23,13 @@
 using namespace std::string_literals;
 
 dear_imgui_wrapper::dear_imgui_wrapper(int &argc, char **argv, thread_safe_interface<audio_abstraction> &&audio_handle)
-    : audio_handle(std::move(audio_handle)),
+    : should_continue(true),
+    audio_handle(std::move(audio_handle)),
     state(UserDesiredState::stop),
     home_path("/usr/home/joe"s),
     native_separator("/"s),
-    project_directory(home_path + "/.local/share/applications/dynamick-cast/"s)
+    project_directory(home_path + "/.local/share/applications/dynamick-cast/"s),
+    url_input_buffer(std::make_unique<char[]>(buffer_size))
     {
 
     // Setup SDL
@@ -127,6 +129,20 @@ dear_imgui_wrapper::~dear_imgui_wrapper() {
     SDL_Quit();
 }
 
+void dear_imgui_wrapper::hotkey_handler() {
+    if(ImGui::IsKeyPressed(SDL_SCANCODE_F4) && ImGui::IsKeyPressed(SDL_SCANCODE_LALT))
+        should_continue = false;
+    if(ImGui::IsKeyPressed(SDL_SCANCODE_LCTRL) && ImGui::IsKeyPressed(SDL_SCANCODE_Q))
+        should_continue = false;
+    if(ImGui::IsKeyPressed(SDL_SCANCODE_F5)){
+        save_subscriptions();
+    }
+    if(ImGui::IsKeyPressed(SDL_SCANCODE_F9)) {
+        load_subscriptions();
+    }
+}
+
+
 void dear_imgui_wrapper::sync_audio_with_library_state() {
             
 }
@@ -151,8 +167,7 @@ void dear_imgui_wrapper::run() {
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
     // Main loop
-    bool done = false;
-    while (!done)
+    while (should_continue)
     {
         // Poll and handle events (inputs, window resize, etc.)
         // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
@@ -163,20 +178,18 @@ void dear_imgui_wrapper::run() {
         while (SDL_PollEvent(&event))
         {
             ImGui_ImplSDL2_ProcessEvent(&event);
-            if (event.type == SDL_QUIT)
-                done = true;
-            if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(window))
-                done = true;
+            if ((event.type == SDL_QUIT)
+                || (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(window))) {
+                should_continue = false;
+            }
         }
 
         // Start the Dear ImGui frame
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplSDL2_NewFrame(window);
         ImGui::NewFrame();
-
-        // 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
         {
-
+            static bool open_window = false;
             static float vol = 100.0f;
             static float track_position = 0.0f;
             static episode const * cur_ep = nullptr;
@@ -192,26 +205,48 @@ void dear_imgui_wrapper::run() {
                         load_subscriptions();
                     }
                     if(ImGui::MenuItem("Save subscriptions")) {
-
+                        save_subscriptions();
                     }
-                    if (ImGui::MenuItem("Close"))
-                        done = true;
+                    if (ImGui::MenuItem("Close")) {
+                        should_continue = false;
+                    }
                     ImGui::EndMenu();
                 }
 
                 if (ImGui::BeginMenu("Podcasts"))
                 {
-                    if (ImGui::MenuItem("Add podcast via remote RSS")) {
 
+                    if (ImGui::MenuItem("Add podcast via remote RSS")) {
+                        open_window = true;
                     }
+
                     ImGui::EndMenu();
                 }
+
+                    if(open_window) {
+                        ImGui::SetNextWindowSize(ImVec2(512,128), ImGuiCond_FirstUseEver);
+                        ImGui::Begin("Fetch remote RSS", &open_window, ImGuiWindowFlags_MenuBar);
+                        
+                            ImGui::InputText("URL input", url_input_buffer.get(), buffer_size, ImGuiInputTextFlags_CharsNoBlank);
+                            if(ImGui::Button("Fetch")) {
+                                auto url = std::string(url_input_buffer.get());
+                                fmt::print("{}\n",url);
+                                fetch_rss(url);
+                                open_window = false;
+                                for(auto i = 0; i < buffer_size; ++i) {
+                                    url_input_buffer[i] = '\0';
+                                }
+                            }
+                        
+                        ImGui::End();
+                    }
 
                 menu_size = ImGui::GetWindowSize();
 
                 ImGui::EndMainMenuBar();
             }
 
+            hotkey_handler();
 
             const ImGuiViewport* viewport = ImGui::GetMainViewport();
             ImGui::SetNextWindowPos(ImVec2(0, menu_size.y));
@@ -251,20 +286,28 @@ void dear_imgui_wrapper::run() {
                 ImGui::TableNextColumn();
                 ImGui::Text("Podcasts");
 
+                ImGui::Separator();
+
                 for(auto & [name, podcast] : channels) {
                     ImGui::Selectable(name.c_str());
+                    if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0)) {
+                        open_channel = name;
+                    }
+
                     if(ImGui::BeginPopupContextItem()) {
                         if(ImGui::Button("View episodes")) {
                             open_channel = name;
+                            ImGui::CloseCurrentPopup();
                         }
                         if(ImGui::Button("Update feed")) {
                             fetch_rss(podcast.rss_url());
+                            ImGui::CloseCurrentPopup();
                         }
                         if(ImGui::Button("Remove local files")) {
-
+                            ImGui::CloseCurrentPopup();
                         }
                         if(ImGui::Button("Unsubscribe and remove local files")) {
-
+                            ImGui::CloseCurrentPopup();
                         }
                         ImGui::EndPopup();
                     }
@@ -281,6 +324,8 @@ void dear_imgui_wrapper::run() {
                 ImGui::TableNextColumn();
                 ImGui::Text("Episodes");
 
+                ImGui::Separator();
+
                 if(!open_channel.empty()) {
                     auto result_itr = channels.find(open_channel);
                     if(result_itr != nullptr) {
@@ -289,13 +334,19 @@ void dear_imgui_wrapper::run() {
                             ImGui::Selectable(ep.get_title().c_str());
                             if(ImGui::BeginPopupContextItem()) {
                                 if(ImGui::Button("Play / Download")) {
+                                    
                                     cur_ep = std::addressof(ep);
                                     download_or_play(ep);
+                                    
+                                    ImGui::CloseCurrentPopup();
                                 }
                                 if(ImGui::Button("Delete file")) {
-                                        std::filesystem::path file(project_directory + open_channel + native_separator + ep.get_sanitized_file_name());
-                                        std::error_code ec;
-                                        std::filesystem::remove(file,ec);
+
+                                    std::filesystem::path file(project_directory + open_channel + native_separator + ep.get_sanitized_file_name());
+                                    std::error_code ec;
+                                    std::filesystem::remove(file,ec);
+
+                                    ImGui::CloseCurrentPopup();
                                 }
                                 ImGui::EndPopup();
                             }
@@ -345,6 +396,33 @@ void dear_imgui_wrapper::load_subscriptions() noexcept {
         
         notify_and_ignore(e);
     }    
+}
+
+void dear_imgui_wrapper::save_subscriptions() {
+    fmt::print("Saving subscriptions.\n");
+    std::string file_path = project_directory + "subscriptions.json"s;
+    std::ofstream save_file(file_path, std::ios::out);
+
+    if(not save_file.is_open()) {
+        fmt::print("Error opening file: {}\n", file_path);
+        return;
+    }
+
+    try{
+        // Recall channels is a map, QString -> podcast
+        if(channels.empty()) {
+            save_file.close();
+            return;
+        }
+
+        channels.serialize_into(save_file);
+        save_file.close();
+    }
+    catch(std::runtime_error const &e) {
+        notify_and_ignore(e);
+    }
+
+    return;
 }
 
 void dear_imgui_wrapper::fetch_rss(std::string url) {

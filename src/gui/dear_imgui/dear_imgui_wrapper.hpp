@@ -27,15 +27,22 @@ class dear_imgui_wrapper : public gui_abstraction {
     void run() override;
 
     void load_subscriptions() noexcept;
+    void save_subscriptions();
 
     void fetch_rss(std::string url);
 
+    void hotkey_handler();
+
 
 private:
+    static constexpr size_t buffer_size = 1024;
+
+    bool should_continue;
     thread_safe_interface<audio_abstraction> audio_handle;
     SDL_Window * window;
     void * gl_context;
     ImGuiIO *io_context;
+    std::unique_ptr<char[]> url_input_buffer;
 
     library channels;
     std::mutex seek_bar_lock;
