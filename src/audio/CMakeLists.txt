@@ -1,5 +1,6 @@
+add_library(audio audio_abstraction.hpp)
 
-add_library(audio OBJECT audio_abstraction.hpp)
+set_target_properties(audio PROPERTIES LINKER_LANGUAGE CXX)
 
 if(USE_SFML)
 

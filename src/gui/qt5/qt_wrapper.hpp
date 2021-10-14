@@ -24,5 +24,4 @@ class qt_wrapper : public gui_abstraction {
     MainWindow window;
 };
 
-
 #endif // QT_WRAPPER_HPP

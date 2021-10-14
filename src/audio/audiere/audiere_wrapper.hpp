@@ -1,5 +1,5 @@
-#ifndef RTAUDIO_WRAPPER_HPP
-#define RTAUDIO_WRAPPER_HPP
+#ifndef AUDIERE_WRAPPER_HPP
+#define AUDIERE_WRAPPER_HPP
 
 #include <audiere.h>
 
@@ -40,6 +40,5 @@ private:
     int estimated_duration;
 };
 
-extern audio_interface audio_handle;
 
-#endif // RTAUDIO_WRAPPER_HPP
+#endif // AUDIERE_WRAPPER_HPP

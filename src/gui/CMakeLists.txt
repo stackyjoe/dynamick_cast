@@ -1,4 +1,6 @@
-add_library(gui OBJECT gui_abstraction.hpp)
+add_library(gui SHARED gui_abstraction.hpp)
+
+set_target_properties(gui PROPERTIES LINKER_LANGUAGE CXX)
 
 if(USE_QT5)
 add_subdirectory(qt5)

@@ -78,3 +78,7 @@ void sfml_wrapper::set_volume(int new_vol) {
     interface.setVolume(static_cast<float>(new_vol));
 }
 
+
+thread_safe_interface<audio_abstraction> make_audio() {
+    return thread_safe_interface<audio_abstraction>::make<sfml_wrapper>();
+}

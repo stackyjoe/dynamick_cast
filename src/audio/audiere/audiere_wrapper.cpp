@@ -123,4 +123,6 @@ void audiere_wrapper::set_volume(int new_vol) {
     decoder->setVolume(new_vol*0.01f);
 }
 
-audio_interface audio_handle = audio_interface::make<audiere_wrapper>();
+thread_safe_interface<audio_abstraction> make_audio() {
+    return thread_safe_interface<audio_abstraction>::make<audiere_wrapper>();
+}

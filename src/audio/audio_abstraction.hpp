@@ -5,6 +5,8 @@
 #include <optional>
 #include <string>
 
+#include "dynamick_cast/thread_safe_interface.hpp"
+
 class audio_interface;
 enum class PlayerStatus { error, playing, paused, stopped };
 
@@ -44,5 +46,7 @@ public:
     mutable std::mutex access_lock;
 
 };
+
+thread_safe_interface<audio_abstraction> make_audio();
 
 #endif // AUDIO_ABSTRACTION_HPP

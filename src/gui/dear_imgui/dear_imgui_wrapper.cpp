@@ -265,8 +265,8 @@ void dear_imgui_wrapper::run() {
 
                 if(!open_channel.empty()) {
                     auto result_itr = channels.find(open_channel);
-                    if(result_itr != channels.end()) {
-                        auto &pod = result_itr->second;
+                    if(result_itr != nullptr) {
+                        auto &pod = *result_itr;
                         for(auto &ep : pod.peek_items()) {
                             if(ImGui::Button(ep.get_title().c_str())) {
                                 cur_ep = std::addressof(ep);
@@ -311,30 +311,13 @@ void dear_imgui_wrapper::load_subscriptions() noexcept {
     }
 
     try {
-        boost::property_tree::ptree tree;
-        boost::property_tree::read_json(save_file, tree);
-
-        std::map<std::string, podcast> new_channels;
-
-        auto end = tree.end();
-        for(auto root = tree.begin(); root != end; ++root) {
-            podcast channel(root->first);
-            channel.fill_from_xml(root->second);
-            new_channels.insert_or_assign(channel.title(), std::move(channel));
-        }
-
-        channels = std::move(new_channels);
-
-        for(auto &[name, channel] : channels)
-            std::cout << "Loaded channel: " << name << " with " << channel.episode_count() << " episodes." << std::endl;
-
-
+        channels.fill_from_json(save_file);
         sync_ui_with_library_state();
     }
     catch(const std::exception &e) {
         // Leave map in empty state.
-        channels.clear();
-        std::cout << "An exception occurred: " << e.what() << std::endl;
+        
+        fmt::print("An exception occurred: {}\n", e.what());
     }    
 }
 
@@ -359,4 +342,8 @@ void dear_imgui_wrapper::download_or_play(episode const & ep) {
     else {
         fmt::print("Error opening file: {}\n", file_path);
     }
+}
+
+thread_safe_interface<gui_abstraction> make_gui(int argc, char ** argv, thread_safe_interface<audio_abstraction> audio) {
+    return thread_safe_interface<gui_abstraction>::make<dear_imgui_wrapper>(argc, argv, std::move(audio));
 }

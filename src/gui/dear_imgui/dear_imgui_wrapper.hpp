@@ -7,8 +7,7 @@
 #include "dynamick_cast/thread_safe_interface.hpp"
 #include "audio/audio_abstraction.hpp"
 #include "gui/gui_abstraction.hpp"
-#include "library/episode.hpp"
-#include "library/podcast.hpp"
+#include "library/library.hpp"
 #include "networking/getter.hpp"
 #include "shared/user_desired_state.hpp"
 
@@ -35,7 +34,7 @@ private:
     void * gl_context;
     ImGuiIO *io_context;
 
-    std::map<std::string, podcast> channels;
+    library channels;
     std::mutex seek_bar_lock;
     std::mutex daemon_lock;
     UserDesiredState state;
@@ -47,6 +46,5 @@ private:
 
     void download_or_play(episode const & ep);
 };
-
 
 #endif // DEAR_IMGUI_WRAPPER

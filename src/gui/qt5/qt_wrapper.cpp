@@ -26,3 +26,7 @@ void qt_wrapper::run() {
     window.show();
     app.exec();
 }
+
+thread_safe_interface<gui_abstraction> make_gui(int argc, char ** argv, thread_safe_interface<audio_abstraction> audio) {
+    return thread_safe_interface<gui_abstraction>::make<qt_wrapper>(argc, argv, std::move(audio));
+}

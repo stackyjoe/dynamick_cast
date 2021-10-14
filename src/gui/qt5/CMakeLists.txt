@@ -1,4 +1,3 @@
-
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
@@ -24,5 +23,5 @@ set_property(TARGET qt5_gui_implementation PROPERTY POSITION_INDEPENDENT_CODE ON
 #use Qt
 find_package(Qt5Widgets REQUIRED)
 target_link_libraries(qt5_gui_implementation PUBLIC Qt5::Widgets)
-target_include_directories(qt5_gui_implementation PUBLIC ${Qt5Widgets_INCLUDE_DIRS} "${UIC_DIR}/include/")
+target_include_directories(qt5_gui_implementation INTERFACE ${Qt5Widgets_INCLUDE_DIRS} "${UIC_DIR}/include/")
 #

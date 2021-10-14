@@ -1,4 +1,4 @@
-add_library(dear_imgui_gui_implementation OBJECT)
+add_library(dear_imgui_gui_implementation SHARED)
 set(this_dir ${CMAKE_CURRENT_SOURCE_DIR})
 
 target_include_directories(dear_imgui_gui_implementation PUBLIC

@@ -1,15 +1,15 @@
 add_library(sfml_mp3_implementation OBJECT)
-set(this_dir ${CMAKE_CURRENT_SOURCE_DIR})
 
-if(USE_SFML)
-if(USE_SFML_MP3_EXPERIMENTAL)
-    add_compile_definitions(USE_SFML_MP3_EXPERIMENTAL yes)
+if(USE_SFML AND USE_SFML_MP3_EXPERIMENTAL)
+    add_compile_definitions(USE_SFML_MP3_EXPERIMENTAL Yes)
 
-    target_sources(sfml_mp3_implementation PUBLIC
-        ${this_dir}/SoundFileReaderMp3.cpp
-        ${this_dir}/mp3.cpp
-        ${this_dir}/music_adapter.cpp 
-        ${this_dir}/music_adapter.hpp)
+    set(sfml_mp3_sources SoundFileReaderMp3.cpp  SoundFileReaderMp3.hpp
+        mp3.cpp mp3.hpp
+        music_adapter.cpp music_adapter.hpp)
+
+    list(TRANSFORM sfml_mp3_sources PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/")
+
+    target_sources(sfml_mp3_implementation PUBLIC ${sfml_mp3_sources})
 
     find_package(SFML COMPONENTS audio graphics window system REQUIRED)
     target_link_libraries (sfml_mp3_implementation PUBLIC sfml-audio sfml-graphics sfml-system sfml-window)
@@ -20,4 +20,4 @@ if(USE_SFML_MP3_EXPERIMENTAL)
     #
 
 endif()
-endif()
+

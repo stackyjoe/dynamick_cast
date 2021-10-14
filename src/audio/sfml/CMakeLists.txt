@@ -1,5 +1,5 @@
 
-add_library(sfml_audio_implementation OBJECT)
+add_library(sfml_audio_implementation SHARED)
 set(this_dir ${CMAKE_CURRENT_SOURCE_DIR})
 
 find_package(SFML COMPONENTS network audio graphics window system REQUIRED)

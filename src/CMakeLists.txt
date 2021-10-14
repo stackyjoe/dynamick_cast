@@ -38,9 +38,4 @@ target_link_libraries (main PRIVATE fmt)
 
 target_link_libraries ( main PRIVATE audio gui library networking shared)
 
-if(UNIX)
-target_include_directories(main PRIVATE "/usr/local/include")
-target_link_directories( main PRIVATE "/usr/local/lib")
-endif()
-
 
