@@ -22,42 +22,7 @@
 
 using namespace std::string_literals;
 
-/*
-MainWindow::MainWindow(thread_safe_interface<audio_abstraction> &&audio_handle) :
-    QMainWindow(nullptr),
-    ui(std::make_unique<Ui::MainWindow>()),
-    audio_handle(std::move(audio_handle)),
-    state(UserDesiredState::stop),
-    home_path(QDir::homePath().toStdString()),
-    native_separator(""s+QDir::separator().toLatin1()),
-    project_directory(home_path + "/.local/share/applications/dynamick-cast/"s),
-    daemon(
-        [this](){
-            while(1) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-                this->sync_audio_with_library_state();
-                this->sync_ui_with_audio_state();
-            }
-        }),
-    volume(100)
-{
-    ui->setupUi(this);
-    showMaximized();
-
-    auto * podcast_item_model = new QStandardItemModel;
-    QStringList headers { QString {"Podcast title"} };
-    podcast_item_model->setHorizontalHeaderLabels(std::move(headers));
-    ui->podcastView->setModel(podcast_item_model);
-
-    auto * episode_item_model = new QStandardItemModel;
-    QStringList ep_headers { QStringList { QString {""}, QString{"Newness"}, QString {"Episode title"} } };
-    episode_item_model->setHorizontalHeaderLabels(ep_headers);
-    ui->episodeView->setModel(episode_item_model);
-
-    set_up_connections();
-}
-*/
 MainWindow::~MainWindow() = default;
 
 void MainWindow::set_up_connections() {

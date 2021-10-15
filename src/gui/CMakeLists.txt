@@ -1,4 +1,4 @@
-add_library(gui SHARED gui_abstraction.hpp)
+add_library(gui STATIC gui_abstraction.hpp)
 
 set_target_properties(gui PROPERTIES LINKER_LANGUAGE CXX)
 

@@ -21,7 +21,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${SHARED_CXX_FLAGS} -O2"
 endif()
 
 #Add executable target
-add_executable(main main.cpp)
+add_library(main STATIC main.cpp)
 
 set_property(TARGET main PROPERTY POSITION_INDEPENDENT_CODE ON)
 
@@ -33,9 +33,9 @@ add_subdirectory(shared)
 
 # use fmt
 find_package(fmt REQUIRED)
-target_link_libraries (main PRIVATE fmt)
+target_link_libraries (main PUBLIC fmt)
 #
 
-target_link_libraries ( main PRIVATE audio gui library networking shared)
+target_link_libraries ( main PUBLIC audio gui library networking shared)
 
 

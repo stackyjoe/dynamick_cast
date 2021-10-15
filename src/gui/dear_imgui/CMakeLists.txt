@@ -1,23 +1,26 @@
-add_library(dear_imgui_gui_implementation SHARED)
-set(this_dir ${CMAKE_CURRENT_SOURCE_DIR})
+add_library(dear_imgui_gui_implementation STATIC)
 
 target_include_directories(dear_imgui_gui_implementation PUBLIC
     ${imgui_directory}
     /usr/local/include/SDL2/
     ${imgui_directory}/examples/libs/gl3w/)
 
-target_sources(dear_imgui_gui_implementation PUBLIC
-    ${this_dir}/dear_imgui_wrapper.hpp
-    ${this_dir}/dear_imgui_wrapper.cpp
-    ${imgui_directory}/imgui.cpp
-    ${imgui_directory}/imgui_demo.cpp
-    ${imgui_directory}/imgui_draw.cpp
-    ${imgui_directory}/imgui_tables.cpp
-    ${imgui_directory}/imgui_widgets.cpp
-    ${imgui_directory}/backends/imgui_impl_opengl3.h
-    ${imgui_directory}/backends/imgui_impl_opengl3.cpp
-    ${imgui_directory}/backends/imgui_impl_sdl.cpp
-    ${imgui_directory}/backends/imgui_impl_sdl.h)
+set(imgui_wrapper_sources dear_imgui_wrapper.cpp dear_imgui_wrapper.hpp)
+list(TRANSFORM imgui_wrapper_sources PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/")
+
+
+set(imgui_sources imgui.cpp imgui.h imgui_demo.cpp imgui_internal.h
+    imgui_draw.cpp imgui_tables.cpp imgui_widgets.cpp)
+list(TRANSFORM imgui_sources PREPEND "${imgui_directory}/")
+
+
+set(imgui_backend_sources imgui_impl_opengl3.h imgui_impl_opengl3.cpp 
+    imgui_impl_sdl.cpp imgui_impl_sdl.h)
+list(TRANSFORM imgui_backend_sources PREPEND "${imgui_directory}/backends/")
+
+
+
+target_sources(dear_imgui_gui_implementation PUBLIC ${imgui_backend_sources} ${imgui_sources} ${imgui_wrapper_sources})
 
 target_link_libraries(dear_imgui_gui_implementation PUBLIC GL SDL2)
 

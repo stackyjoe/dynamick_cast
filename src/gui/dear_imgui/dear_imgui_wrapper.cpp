@@ -24,6 +24,7 @@ using namespace std::string_literals;
 
 dear_imgui_wrapper::dear_imgui_wrapper(int &argc, char **argv, thread_safe_interface<audio_abstraction> &&audio_handle)
     : should_continue(true),
+    open_window(false),
     audio_handle(std::move(audio_handle)),
     state(UserDesiredState::stop),
     home_path("/usr/home/joe"s),
@@ -166,6 +167,8 @@ void dear_imgui_wrapper::run() {
     bool show_another_window = false;
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
+    load_subscriptions();
+
     // Main loop
     while (should_continue)
     {
@@ -189,7 +192,6 @@ void dear_imgui_wrapper::run() {
         ImGui_ImplSDL2_NewFrame(window);
         ImGui::NewFrame();
         {
-            static bool open_window = false;
             static float vol = 100.0f;
             static float track_position = 0.0f;
             static episode const * cur_ep = nullptr;
@@ -223,23 +225,7 @@ void dear_imgui_wrapper::run() {
                     ImGui::EndMenu();
                 }
 
-                    if(open_window) {
-                        ImGui::SetNextWindowSize(ImVec2(512,128), ImGuiCond_FirstUseEver);
-                        ImGui::Begin("Fetch remote RSS", &open_window, ImGuiWindowFlags_MenuBar);
-                        
-                            ImGui::InputText("URL input", url_input_buffer.get(), buffer_size, ImGuiInputTextFlags_CharsNoBlank);
-                            if(ImGui::Button("Fetch")) {
-                                auto url = std::string(url_input_buffer.get());
-                                fmt::print("{}\n",url);
-                                fetch_rss(url);
-                                open_window = false;
-                                for(auto i = 0; i < buffer_size; ++i) {
-                                    url_input_buffer[i] = '\0';
-                                }
-                            }
-                        
-                        ImGui::End();
-                    }
+                
 
                 menu_size = ImGui::GetWindowSize();
 
@@ -332,6 +318,13 @@ void dear_imgui_wrapper::run() {
                         auto &pod = *result_itr;
                         for(auto &ep : pod.peek_items()) {
                             ImGui::Selectable(ep.get_title().c_str());
+
+                            if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0)) {
+                                cur_ep = std::addressof(ep);
+                                download_or_play(ep);
+                            }
+
+
                             if(ImGui::BeginPopupContextItem()) {
                                 if(ImGui::Button("Play / Download")) {
                                     
@@ -366,6 +359,8 @@ void dear_imgui_wrapper::run() {
                 });
             ImGui::End();
         }
+
+        fetch_rss_dialog();
 
         // Rendering
         ImGui::Render();
@@ -445,6 +440,26 @@ void dear_imgui_wrapper::fetch_rss(std::string url) {
             }
         }
     );
+}
+
+void dear_imgui_wrapper::fetch_rss_dialog() {
+    if(open_window) {
+        ImGui::SetNextWindowSize(ImVec2(512,128), ImGuiCond_FirstUseEver);
+        ImGui::Begin("Fetch remote RSS", &open_window, ImGuiWindowFlags_MenuBar);
+                        
+        ImGui::InputText("URL input", url_input_buffer.get(), buffer_size, ImGuiInputTextFlags_CharsNoBlank);
+        if(ImGui::Button("Fetch")) {
+            auto url = std::string(url_input_buffer.get());
+            fmt::print("{}\n",url);
+            fetch_rss(url);
+            open_window = false;
+            for(auto i = 0; i < buffer_size; ++i) {
+                url_input_buffer[i] = '\0';
+            }
+        }
+                        
+        ImGui::End();
+    }
 }
 
 

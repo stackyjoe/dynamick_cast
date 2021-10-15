@@ -1,4 +1,4 @@
-add_library(audiere_audio_implementation SHARED)
+add_library(audiere_audio_implementation STATIC)
 
 target_sources(audiere PUBLIC audiere_wrapper.hpp audiere_wrapper.cpp)
 

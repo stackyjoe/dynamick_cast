@@ -42,5 +42,9 @@ endif()
 
 include_directories(./include ./src ./lib)
 
+add_executable(dynamick_cast)
+
 add_subdirectory(lib)
 add_subdirectory(src)
+
+target_link_libraries(dynamick_cast PRIVATE main)

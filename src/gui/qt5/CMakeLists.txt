@@ -4,7 +4,7 @@ set(CMAKE_AUTORCC ON)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-add_library(qt5_gui_implementation SHARED resources.qrc mainwindow.ui mainwindow.hpp)
+add_library(qt5_gui_implementation STATIC resources.qrc mainwindow.ui mainwindow.hpp)
 
 target_sources(qt5_gui_implementation PUBLIC)
 

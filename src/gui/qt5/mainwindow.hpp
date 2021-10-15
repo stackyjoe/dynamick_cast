@@ -120,6 +120,7 @@ private:
     ui->episodeView->setModel(episode_item_model);
 
     set_up_connections();
+    load_subscriptions();
 }
     ~MainWindow();
     void sync_audio_with_library_state();

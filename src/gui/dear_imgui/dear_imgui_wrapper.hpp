@@ -15,7 +15,7 @@ class SDL_Window;
 class ImGuiIO;
 
 class dear_imgui_wrapper : public gui_abstraction {
-    public:
+public:
     dear_imgui_wrapper(int &argc, char **argv, thread_safe_interface<audio_abstraction> &&audio_handle);
     ~dear_imgui_wrapper();
 
@@ -26,18 +26,21 @@ class dear_imgui_wrapper : public gui_abstraction {
 
     void run() override;
 
+private:
+
     void load_subscriptions() noexcept;
     void save_subscriptions();
 
     void fetch_rss(std::string url);
+    void fetch_rss_dialog();
 
     void hotkey_handler();
 
 
-private:
     static constexpr size_t buffer_size = 1024;
 
     bool should_continue;
+    bool open_window;
     thread_safe_interface<audio_abstraction> audio_handle;
     SDL_Window * window;
     void * gl_context;

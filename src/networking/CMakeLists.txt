@@ -1,5 +1,4 @@
-add_library(networking OBJECT)
-
+add_library(networking STATIC beastly_connection.cpp getter.cpp url_parser.cpp)
 
 #use Boost
 set(Boost_USE_STATIC_LIBS ON)
@@ -26,6 +25,5 @@ find_package(OpenSSL REQUIRED)
 target_link_libraries (networking PRIVATE OpenSSL::SSL OpenSSL::Crypto)
 #
 
-target_sources(networking PRIVATE beastly_connection.cpp getter.cpp url_parser.cpp)
 
 
