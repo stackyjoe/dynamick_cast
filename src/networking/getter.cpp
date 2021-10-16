@@ -12,6 +12,8 @@
 
 #include <fmt/core.h>
 
+#include "dynamick_cast/generic_exception_handling.hpp"
+#include "dynamick_cast/debug_print.hpp"
 #include "shared/string_functions.hpp"
 #include "getter.hpp"
 
@@ -54,7 +56,7 @@ std::unique_ptr<beastly_connection> getter::make_connection(parsed_url uri) {
             }
             else {
                 network_resources.release();
-                // fmt::print("Algorithm ID {}: An error occurred attempting to set up SSL: {}\n", p, ec.message());
+                debug_print(fmt::format("Algorithm ID {}: An error occurred attempting to set up SSL: {}\n", p, ec.message()));
             }
         }
     }
@@ -71,8 +73,8 @@ void getter::coro_download(std::string url,
                            std::promise<bool> promise,
                            boost::asio::yield_context yield_ctx) {
     boost::beast::error_code ec;
-    auto protocols = {ssl::context::tlsv11, ssl::context::tlsv12, ssl::context::tlsv13};
-    constexpr size_t max_redirects = 10;
+    //auto protocols = {ssl::context::tlsv11, ssl::context::tlsv12, ssl::context::tlsv13};
+    constexpr size_t max_redirects = 5;
         
     auto parsed = parse(url);
 

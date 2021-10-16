@@ -6,8 +6,8 @@ else()
 set(SHARED_CXX_FLAGS "")
 endif()
 
-if(${TIDY} STREQUAL "Yes")
-    if(${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang")
+if(TIDY STREQUAL "Yes")
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     set(CMAKE_CXX_CLANG_TIDY
         clang-tidy;
         -header-filter=.*;

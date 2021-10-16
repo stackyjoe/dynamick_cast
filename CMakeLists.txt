@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.9)
 set(CMAKE_CXX_STANDARD 17)
 
 project(dynamick_cast)
@@ -48,3 +48,7 @@ add_subdirectory(lib)
 add_subdirectory(src)
 
 target_link_libraries(dynamick_cast PRIVATE main)
+
+if((LTO STREQUAL ON) OR  (LTO STREQUAL Yes))
+    set_property(TARGET dynamick_cast PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+endif()

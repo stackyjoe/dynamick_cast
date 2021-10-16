@@ -27,6 +27,7 @@ public:
     download_shared_state &operator=(download_shared_state &&) = delete;
 
     void adopt_lock(std::unique_lock<std::mutex> &&lock) noexcept;
+    [[nodiscard]] std::unique_lock<std::mutex> take_lock();
     void clear_lock() noexcept;
     size_t get_bytes_completed() const noexcept;
     size_t get_bytes_total() const noexcept;

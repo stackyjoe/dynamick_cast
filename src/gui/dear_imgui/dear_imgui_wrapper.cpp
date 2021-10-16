@@ -30,7 +30,12 @@ dear_imgui_wrapper::dear_imgui_wrapper(int &argc, char **argv, thread_safe_inter
     home_path("/usr/home/joe"s),
     native_separator("/"s),
     project_directory(home_path + "/.local/share/applications/dynamick-cast/"s),
-    url_input_buffer(std::make_unique<char[]>(buffer_size))
+    url_input_buffer(std::make_unique<char[]>(buffer_size)),
+    vol(100.0f),
+    user_holds_volume_slider(false),
+    track_position(0.0f),
+    user_holds_track_slider(false),
+    menu_size(ImVec2(0,20))
     {
 
     // Setup SDL
@@ -130,6 +135,31 @@ dear_imgui_wrapper::~dear_imgui_wrapper() {
     SDL_Quit();
 }
 
+void dear_imgui_wrapper::toggle_state() {
+
+    switch(state) {
+    case UserDesiredState::play : {
+        audio_handle.perform(
+            [](audio_abstraction &handle) {
+                handle.pause();
+            }
+        );
+        state = UserDesiredState::pause;
+    } break;
+    case UserDesiredState::pause: {
+        audio_handle.perform(
+            [](audio_abstraction &handle) {
+                handle.play();
+            }
+        );
+        state = UserDesiredState::play;
+    } break;
+    default: {
+        debug_print("Error, state is not play or pause.\n");
+    }
+    }
+}
+
 void dear_imgui_wrapper::hotkey_handler() {
     if(ImGui::IsKeyPressed(SDL_SCANCODE_F4) && ImGui::IsKeyPressed(SDL_SCANCODE_LALT))
         should_continue = false;
@@ -140,6 +170,9 @@ void dear_imgui_wrapper::hotkey_handler() {
     }
     if(ImGui::IsKeyPressed(SDL_SCANCODE_F9)) {
         load_subscriptions();
+    }
+    if(ImGui::IsKeyPressed(SDL_SCANCODE_SPACE)) {
+        toggle_state();
     }
 }
 
@@ -163,9 +196,9 @@ void dear_imgui_wrapper::sync_ui_with_library_state() {
 void dear_imgui_wrapper::run() {
 
     // Our state
-    bool show_demo_window = true;
-    bool show_another_window = false;
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+    episode const * cur_ep = nullptr;
+
 
     load_subscriptions();
 
@@ -192,11 +225,6 @@ void dear_imgui_wrapper::run() {
         ImGui_ImplSDL2_NewFrame(window);
         ImGui::NewFrame();
         {
-            static float vol = 100.0f;
-            static float track_position = 0.0f;
-            static episode const * cur_ep = nullptr;
-            static int counter = 0;
-            static ImVec2 menu_size = ImVec2(0,20);
             ImGui::SetNextWindowSize(ImVec2(640,480));
 
             if(ImGui::BeginMainMenuBar())
@@ -252,8 +280,21 @@ void dear_imgui_wrapper::run() {
 
             ImGui::BeginChild("sliders", ImVec2(-1,60), true);
             ImGui::BeginChild("volume slider", ImVec2(200, 20), false);
+
             ImGui::SliderFloat("Volume", &vol, 0.0f, 100.0f);
+            if(ImGui::IsItemActive()) {
+                user_holds_volume_slider = true;
+            }
+            else {
+                user_holds_volume_slider = false;
+            }
             ImGui::EndChild();
+
+            ImGui::SameLine();
+
+            if(ImGui::Button("Play/Pause")) {
+                toggle_state();
+            }
 
             ImGui::SameLine();
 
@@ -261,6 +302,13 @@ void dear_imgui_wrapper::run() {
 
             ImGui::BeginChild("position slider", ImVec2(-1, 20), false);
             ImGui::SliderFloat("Track Position", &track_position, 0.0f, 100.0f);
+            if(ImGui::IsItemActive()) {
+                user_holds_track_slider = true;
+            }
+            else {
+                user_holds_track_slider = false;
+            }
+
             ImGui::EndChild();
 
 
@@ -317,6 +365,17 @@ void dear_imgui_wrapper::run() {
                     if(result_itr != nullptr) {
                         auto &pod = *result_itr;
                         for(auto &ep : pod.peek_items()) {
+                            auto dlr = ep.get_download_rights();
+                            
+                            if(auto maybe_lock = dlr->try_lock(); maybe_lock.has_value()){
+                                ImGui::Text("   ");
+                            }
+                            else {
+                                std::string quantity_read = fmt::format("{} B",dlr->get_bytes_completed());
+                                ImGui::Text("%s", quantity_read.c_str());
+                            }
+
+                            ImGui::SameLine();
                             ImGui::Selectable(ep.get_title().c_str());
 
                             if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0)) {
@@ -354,8 +413,18 @@ void dear_imgui_wrapper::run() {
             ImGui::EndGroup();
 
             audio_handle.perform(
-                [vol=vol, track_position=track_position](audio_abstraction &handle) {
-                    handle.set_volume(vol);
+                [this](audio_abstraction &handle) {
+                    
+                    if(this->user_holds_volume_slider) {
+                        handle.set_volume(static_cast<int>(this->vol));
+                    }
+
+                    if(this->user_holds_track_slider) {
+                        handle.seek_by_percent(this->track_position/100.f);
+                    }
+                    else {
+                        this->track_position = handle.get_percent_played()*100.f;
+                    }
                 });
             ImGui::End();
         }
@@ -420,12 +489,63 @@ void dear_imgui_wrapper::save_subscriptions() {
     return;
 }
 
+void dear_imgui_wrapper::download(episode const & ep, std::string file_path, std::string url) {
+
+
+    auto download_rights = ep.get_download_rights();
+
+    auto maybe_lock = download_rights->try_lock();
+
+    if(not maybe_lock.has_value()) {
+        return;
+    }
+
+    download_rights->adopt_lock(std::move(*maybe_lock));
+    maybe_lock = {};
+
+    download_rights->set_gui_callback([](){});
+
+    // Since the completion handler holds ownership of the shared_state, we can just use a raw pointer here.
+    auto prog = [shared_state=download_rights]([[maybe_unused]] size_t completed, [[maybe_unused]] size_t total) -> void {
+        shared_state->set_bytes_completed(completed);
+    };
+
+    auto cmpl = [file_path, download_rights=download_rights] (
+            boost::beast::error_code const &ec,
+            size_t bytes_read,
+            beastly_connection &resources) mutable -> void {
+
+        debug_print("Beginning completion handler\n");
+        std::fflush(stdout);
+
+        auto lock = download_rights->take_lock();
+
+        if(ec or bytes_read == 0) {
+            notify_and_ignore(ec);
+
+            download_rights->request_gui_update();
+            return;
+        }
+
+        std::ofstream output_file(file_path, std::ios::binary);
+
+        debug_print("File saved to: {}\n", file_path);
+
+        std::string const &body = resources.parser().body();
+
+        output_file.write(body.c_str(), body.size());
+        output_file.close();
+    };
+
+    auto f = get.get(url, std::move(prog), std::move(cmpl));
+}
+
 void dear_imgui_wrapper::fetch_rss(std::string url) {
         auto f = get.get(url,
                        []([[maybe_unused]] size_t read, [[maybe_unused]] size_t total){ return;},
                        [this, url](boost::beast::error_code const & ec, [[maybe_unused]] size_t bytes_read, beastly_connection &res){
             if(ec) {
-                fmt::print("An exception occurred: {}\n", ec.message());
+                notify_and_ignore(ec);
                 return;
             }
 
@@ -468,7 +588,7 @@ void dear_imgui_wrapper::download_or_play(episode const & ep) {
     std::string url = ep.url();
     std::string file_name = ep.get_sanitized_file_name();
 
-    std::string file_path = project_directory + native_separator + open_channel + native_separator + file_name;
+    std::string file_path = project_directory + open_channel + native_separator + file_name;
 
     if( audio_handle.perform(
         [file_path](audio_abstraction &handle) -> bool {
@@ -482,7 +602,7 @@ void dear_imgui_wrapper::download_or_play(episode const & ep) {
         state = UserDesiredState::play;
     }
     else {
-        fmt::print("Error opening file: {}\n", file_path);
+        download(ep, file_path, url);
     }
 }
 

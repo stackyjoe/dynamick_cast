@@ -8,10 +8,10 @@ if(USE_SFML)
     endif()
 
     add_subdirectory(sfml)
-    target_link_libraries(audio INTERFACE sfml_audio_implementation)
+    target_link_libraries(audio PUBLIC sfml_audio_implementation)
 
     if(USE_SFML_MP3_EXPERIMENTAL)
-        target_link_libraries(audio INTERFACE sfml_mp3_implementation)
+        target_link_libraries(audio PUBLIC sfml_mp3_implementation)
     endif()
 
 elseif (USE_AUDIERE)

@@ -10,6 +10,13 @@ void download_shared_state::adopt_lock(std::unique_lock<std::mutex> &&lock) noex
     lock_storage.emplace(std::move(lock));
 }
 
+std::unique_lock<std::mutex> download_shared_state::take_lock() {
+    std::unique_lock<std::mutex> l = std::move(lock_storage.value());
+    lock_storage = {};
+    return l;
+}
+
+
 void download_shared_state::clear_lock() noexcept {
     lock_storage.reset();
 }
