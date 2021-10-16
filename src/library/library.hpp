@@ -1,4 +1,5 @@
 #include <map>
+#include <mutex>
 
 #include "podcast.hpp"
 
@@ -9,6 +10,8 @@ private:
     static constexpr int version = 2;
 
 public:
+    mutable std::mutex access_lock;
+
 
     using iterator = std::map<std::string,podcast>::iterator;
     using const_iterator = std::map<std::string,podcast>::const_iterator;

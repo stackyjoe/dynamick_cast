@@ -49,7 +49,7 @@ private:
     void * gl_context;
     ImGuiIO *io_context;
 
-    library channels;
+    thread_safe_interface<library> library_handle;
     std::mutex seek_bar_lock;
     std::mutex daemon_lock;
     UserDesiredState state;

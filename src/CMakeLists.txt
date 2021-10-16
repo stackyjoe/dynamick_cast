@@ -1,4 +1,4 @@
-if(${STRICT} STREQUAL "Yes")
+if((STRICT STREQUAL Yes) OR (STRICT STREQUAL ON))
 if(UNIX)
 set(SHARED_CXX_FLAGS "-Wall -Werror -pedantic-errors")
 endif()
@@ -6,7 +6,7 @@ else()
 set(SHARED_CXX_FLAGS "")
 endif()
 
-if(TIDY STREQUAL "Yes")
+if((TIDY STREQUAL Yes) OR (TIDY STREQUAL ON))
     if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     set(CMAKE_CXX_CLANG_TIDY
         clang-tidy;
