@@ -65,9 +65,7 @@ http::status beastly_connection::get_status() const noexcept {
 boost::beast::error_code beastly_connection::set_up_ssl(boost::asio::ssl::context_base::method method, boost::asio::ssl::verify_mode mode) {
     ssl_context_.emplace(method);
     ssl_context_->set_options(ssl::context_base::default_workarounds);
-
-
-    ssl_context_->set_default_verify_paths();
+    set_up_certificates();
 
     set_ssl_stream();
     ssl_stream_->set_verify_mode(mode);
@@ -111,6 +109,47 @@ size_t beastly_connection::async_read_some(boost::asio::yield_context yield_ctx)
                                      yield_ctx);
     }
 
+}
+
+#ifdef _WIN64
+#include <wincrypt.h>
+
+#pragma comment (lib, "crypt32")
+#endif
+
+void beastly_connection::set_up_certificates() {
+#ifdef __unix__
+    ssl_context_->set_default_verify_paths();
+    return;
+#endif
+#ifdef _WIN64
+    fmt::print("Windows cert\n");
+    // Starting from code at this link
+    // https://stackoverflow.com/a/40046425
+    HCERTSTORE hStore = CertOpenSystemStore(0, "ROOT");
+    if (hStore == nullptr) {
+        return;
+    }
+
+    X509_STORE* store = X509_STORE_new();
+    PCCERT_CONTEXT pContext = NULL;
+    while ((pContext = CertEnumCertificatesInStore(hStore, pContext)) != nullptr) {
+        X509* x509 = d2i_X509(nullptr,
+            (const unsigned char**)&pContext->pbCertEncoded,
+            pContext->cbCertEncoded);
+        if (x509 != nullptr) {
+            X509_STORE_add_cert(store, x509);
+            X509_free(x509);
+        }
+    }
+
+    CertFreeCertificateContext(pContext);
+    CertCloseStore(hStore, 0);
+
+    SSL_CTX_set_cert_store(ssl_context_->native_handle(), store);
+    return;
+#endif
+    fmt::print("Should not run!\n");
 }
 
 bool beastly_connection::parser_is_done() const noexcept {

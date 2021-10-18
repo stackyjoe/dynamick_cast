@@ -67,7 +67,7 @@ public:
     bool parser_is_done() const noexcept;
 
     boost::beast::http::status get_status() const noexcept;
-
+    void set_up_certificates();
 };
 
 #endif // BEASTLY_CONNECTION_HPP

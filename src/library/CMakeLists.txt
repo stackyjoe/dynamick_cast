@@ -22,7 +22,7 @@ target_link_libraries (library PUBLIC fmt::fmt)
 #
 
 #use boost json
-find_package(Boost COMPONENTS json REQUIRED)
+find_package(Boost REQUIRED COMPONENTS json )
 
 if(Boost_FOUND)
     include_directories(${Boost_INCLUDE_DIRS})
