@@ -55,7 +55,8 @@ public:
     }
 
     void set_parser_body_limit(size_t size_hint) {
-        parser_.body_limit(std::max(default_download_limit, size_hint));
+        size_t desired = std::template max<size_t>(default_download_limit, size_hint);
+        parser_.body_limit(desired);
     }
 
     [[nodiscard]] boost::beast::error_code set_up_ssl(boost::asio::ssl::context_base::method method, boost::asio::ssl::verify_mode mode);

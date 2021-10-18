@@ -11,9 +11,21 @@ list(TRANSFORM library_sources PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/")
 
 target_sources(library PUBLIC ${library_sources})
 
-target_link_libraries(library PUBLIC networking boost_json)
-
 # use pugixml
 find_package(pugiXML REQUIRED)
-target_link_libraries (library PUBLIC pugixml)
+target_link_libraries (library PUBLIC pugixml::pugixml)
+#
+
+# use fmt
+find_package(fmt REQUIRED)
+target_link_libraries (library PUBLIC fmt::fmt)
+#
+
+#use boost json
+find_package(Boost COMPONENTS json REQUIRED)
+
+if(Boost_FOUND)
+    include_directories(${Boost_INCLUDE_DIRS})
+    target_link_libraries(library PUBLIC Boost::json)
+endif()
 #

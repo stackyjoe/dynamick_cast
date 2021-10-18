@@ -4,6 +4,7 @@
 #include <mutex>
 #include <optional>
 #include <string>
+#include <vector>
 
 #include "dynamick_cast/thread_safe_interface.hpp"
 

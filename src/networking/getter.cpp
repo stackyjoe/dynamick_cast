@@ -124,7 +124,7 @@ void getter::coro_download(std::string url,
             case http::status::ok: {
                 fmt::print("\tok\n");
                 auto s = network_resources->parser().base()["Content-Length"].to_string();
-                length_hint = s.empty()? beastly_connection::default_download_limit : std::max(beastly_connection::default_download_limit,std::stoul(s));
+                length_hint = s.empty()? beastly_connection::default_download_limit : std::max(beastly_connection::default_download_limit,static_cast<size_t>(std::stoul(s)));
                 goto try_to_get;
             }
             case http::status::found: {

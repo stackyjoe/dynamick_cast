@@ -13,10 +13,16 @@ if(USE_SFML AND USE_SFML_MP3_EXPERIMENTAL)
 
     find_package(SFML COMPONENTS audio graphics window system REQUIRED)
     target_link_libraries (sfml_mp3_implementation PUBLIC sfml-audio sfml-graphics sfml-system sfml-window)
+
+    
+    find_package(OpenAL CONFIG REQUIRED)
+    target_link_libraries(sfml_mp3_implementation PUBLIC OpenAL::OpenAL)
+
     target_include_directories(sfml_mp3_implementation PUBLIC ./)
 
     # Necessary audio libraries
-    target_link_libraries(sfml_mp3_implementation PUBLIC mpg123)
+    find_package(mpg123 CONFIG REQUIRED)
+    target_link_libraries(sfml_mp3_implementation PUBLIC MPG123::libmpg123 MPG123::libout123 MPG123::libsyn123)
     #
 
 endif()

@@ -64,9 +64,9 @@ http::status beastly_connection::get_status() const noexcept {
 
 boost::beast::error_code beastly_connection::set_up_ssl(boost::asio::ssl::context_base::method method, boost::asio::ssl::verify_mode mode) {
     ssl_context_.emplace(method);
-
-    //ssl::context ctx{ method };
     ssl_context_->set_options(ssl::context_base::default_workarounds);
+
+
     ssl_context_->set_default_verify_paths();
 
     set_ssl_stream();

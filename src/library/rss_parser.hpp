@@ -44,12 +44,10 @@ public:
     podcast parse(std::string backup_url) const {
         auto xml = contents.xml_portion();
 
-        //fmt::print("XML: \n{}\n", xml);
-
         auto p = podcast(std::string{});
         pugi::xml_document doc;
 
-        doc.load_buffer(xml.begin(), xml.size());
+        doc.load_buffer(xml.data(), xml.size());
 
         p.fill_from_xml(doc, backup_url);
 

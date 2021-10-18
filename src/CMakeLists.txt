@@ -31,11 +31,4 @@ add_subdirectory(library)
 add_subdirectory(networking)
 add_subdirectory(shared)
 
-# use fmt
-find_package(fmt REQUIRED)
-target_link_libraries (main PUBLIC fmt)
-#
-
 target_link_libraries ( main PUBLIC audio gui library networking shared)
-
-

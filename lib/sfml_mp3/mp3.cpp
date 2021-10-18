@@ -19,9 +19,9 @@ namespace {
                          ptrdiff_t count) {
         if(destination == nullptr)
             return 1;
-        if(/* ranges overlap */ (source <= destination and destination <= source+count) or (destination <= source and source <= destination + destination_size) or
-        /* source is nullptr */ source == nullptr or
-        /* would overflow buffer */ count > destination_size)
+        if(/* ranges overlap */ ((source <= destination) && (destination <= source+count)) || ((destination <= source) && (source <= destination + destination_size)) ||
+        /* source is nullptr */ (source == nullptr) ||
+        /* would overflow buffer */ (count > destination_size))
             std::fill(destination, destination+destination_size, zero_byte);
 
         std::copy(destination, destination+destination_size, source);
@@ -83,7 +83,7 @@ Mp3::~Mp3()
 }
 
 sf::Time Mp3::getDuration() const {
-    constexpr float magic_number = 26.122*1.0065681445/1.16049382716;
+    constexpr float magic_number = 26.122f*1.0065681445f/1.16049382716f;
 
     // mpg123_length returns the number of frames. Were the mp3 encoded with
     // a fixed bitrate, it would be trivial to compute the play length based on this.

@@ -7,22 +7,22 @@ set(Boost_USE_STATIC_RUNTIME OFF)
 
 add_definitions(-DBOOST_ASIO_DISABLE_CONCEPTS)
 
-find_package(Boost 1.72.0 COMPONENTS)
+find_package(Boost COMPONENTS context coroutine REQUIRED)
 
 if(Boost_FOUND)
     include_directories(${Boost_INCLUDE_DIRS})
-    target_link_libraries(networking PRIVATE boost_context boost_coroutine)
+    target_link_libraries(networking PUBLIC Boost::context Boost::coroutine)
 endif()
 #
 
 #use pthreads
 find_package (Threads)
-target_link_libraries (networking PRIVATE ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries (networking PUBLIC ${CMAKE_THREAD_LIBS_INIT})
 #
 
 # use ssl, tsl
 find_package(OpenSSL REQUIRED)
-target_link_libraries (networking PRIVATE OpenSSL::SSL OpenSSL::Crypto)
+target_link_libraries (networking PUBLIC OpenSSL::SSL OpenSSL::Crypto)
 #
 
 

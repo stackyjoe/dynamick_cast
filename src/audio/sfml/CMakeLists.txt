@@ -19,5 +19,12 @@ if(SFML_FOUND)
 endif()
 
 # Necessary audio libraries
-target_link_libraries(sfml_audio_implementation PUBLIC openal ogg FLAC vorbisenc vorbisfile vorbis)
+find_package(flac CONFIG REQUIRED)
+target_link_libraries(sfml_audio_implementation PUBLIC FLAC::FLAC FLAC::FLAC++)
+
+find_package(Ogg CONFIG REQUIRED)
+target_link_libraries(sfml_audio_implementation PUBLIC Ogg::ogg)
+
+find_package(Vorbis CONFIG REQUIRED)
+target_link_libraries(sfml_audio_implementation PUBLIC Vorbis::vorbis Vorbis::vorbisenc Vorbis::vorbisfile)
 #

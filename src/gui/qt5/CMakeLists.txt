@@ -8,9 +8,8 @@ add_library(qt5_gui_implementation STATIC resources.qrc mainwindow.ui mainwindow
 
 target_sources(qt5_gui_implementation PUBLIC)
 
-set(qt_gui_sources mainwindow.cpp 
-    qt_wrapper.cpp qt_wrapper.hpp 
-    download_shared_state.hpp)
+set(qt_gui_sources mainwindow.cpp mainwindow.hpp
+    qt_wrapper.cpp qt_wrapper.hpp)
 
 list(TRANSFORM qt_gui_sources PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/")
 
@@ -24,4 +23,9 @@ set_property(TARGET qt5_gui_implementation PROPERTY POSITION_INDEPENDENT_CODE ON
 find_package(Qt5Widgets REQUIRED)
 target_link_libraries(qt5_gui_implementation PUBLIC Qt5::Widgets)
 target_include_directories(qt5_gui_implementation INTERFACE ${Qt5Widgets_INCLUDE_DIRS} "${UIC_DIR}/include/")
+#
+
+# use fmt
+find_package(fmt REQUIRED)
+target_link_libraries (qt5_gui_implementation PUBLIC fmt::fmt)
 #

@@ -1,6 +1,7 @@
 # Build folders
 build/
 out/
+.vs/
 
 # C++ objects and libs
 *.slo

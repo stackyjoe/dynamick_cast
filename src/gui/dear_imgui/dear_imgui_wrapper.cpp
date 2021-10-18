@@ -1,4 +1,5 @@
 #include <exception>
+#include <filesystem>
 
 #include <SDL.h>
 #include <fmt/core.h>
@@ -452,7 +453,7 @@ void dear_imgui_wrapper::load_subscriptions() noexcept {
     std::string file_path = project_directory + "subscriptions.json"s;
     std::ifstream save_file(file_path, std::ios::in);
 
-    if(not save_file.is_open()) {
+    if(! save_file.is_open()) {
         fmt::print("Error opening file: {}\n", file_path);
         return;
     }
@@ -477,7 +478,7 @@ void dear_imgui_wrapper::save_subscriptions() {
     std::string file_path = project_directory + "subscriptions.json"s;
     std::ofstream save_file(file_path, std::ios::out);
 
-    if(not save_file.is_open()) {
+    if(! save_file.is_open()) {
         fmt::print("Error opening file: {}\n", file_path);
         return;
     }
@@ -508,7 +509,7 @@ void dear_imgui_wrapper::download(episode const & ep, std::string file_path, std
 
     auto maybe_lock = download_rights->try_lock();
 
-    if(not maybe_lock.has_value()) {
+    if(! maybe_lock.has_value()) {
         return;
     }
 
@@ -532,7 +533,7 @@ void dear_imgui_wrapper::download(episode const & ep, std::string file_path, std
 
         auto lock = download_rights->take_lock();
 
-        if(ec or bytes_read == 0) {
+        if(ec || bytes_read == 0) {
             notify_and_ignore(ec);
 
             download_rights->request_gui_update();
@@ -606,7 +607,7 @@ void dear_imgui_wrapper::download_or_play(episode const & ep) {
 
     if( audio_handle.perform(
         [file_path](audio_abstraction &handle) -> bool {
-            if(not handle.open_from_file(file_path))
+            if(! handle.open_from_file(file_path))
                 return false;
             handle.play();
             return true;
