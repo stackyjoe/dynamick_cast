@@ -10,11 +10,11 @@ set(Boost_USE_STATIC_RUNTIME OFF)
 
 add_definitions(-DBOOST_ASIO_DISABLE_CONCEPTS)
 
-find_package(Boost REQUIRED COMPONENTS context coroutine)
+find_package(Boost REQUIRED COMPONENTS context coroutine thread)
 
 if(Boost_FOUND)
     include_directories(${Boost_INCLUDE_DIRS})
-    target_link_libraries(networking PUBLIC Boost::context Boost::coroutine)
+    target_link_libraries(networking PUBLIC Boost::context Boost::coroutine Boost::thread)
 endif()
 #
 

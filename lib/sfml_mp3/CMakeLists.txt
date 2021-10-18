@@ -21,8 +21,14 @@ if(USE_SFML AND USE_SFML_MP3_EXPERIMENTAL)
     target_include_directories(sfml_mp3_implementation PUBLIC ./)
 
     # Necessary audio libraries
-    find_package(mpg123 CONFIG REQUIRED)
-    target_link_libraries(sfml_mp3_implementation PUBLIC MPG123::libmpg123 MPG123::libout123 MPG123::libsyn123)
+    if(WINDOWS)
+        find_package(mpg123 CONFIG REQUIRED)
+        target_link_libraries(sfml_mp3_implementation PUBLIC MPG123::libmpg123 MPG123::libout123 MPG123::libsyn123)
+    endif()
+    # CMake aware mpg123 seems to be Windows only in October 2021. Likely to change in the next few months.
+    if(UNIX)
+        target_link_libraries(sfml_mp3_implementation PUBLIC mpg123 out123 syn123)
+    endif()
     #
 
 endif()
