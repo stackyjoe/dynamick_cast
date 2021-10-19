@@ -1,6 +1,6 @@
-add_library(sfml_mp3_implementation STATIC)
-
 if(USE_SFML AND USE_SFML_MP3_EXPERIMENTAL)
+    add_library(sfml_mp3_implementation STATIC)
+
     add_compile_definitions(USE_SFML_MP3_EXPERIMENTAL Yes)
 
     set(sfml_mp3_sources SoundFileReaderMp3.cpp  SoundFileReaderMp3.hpp

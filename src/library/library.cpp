@@ -10,6 +10,66 @@
 using iterator = library::iterator;
 using const_iterator = library::const_iterator;
 
+
+#ifdef __unix__
+extern "C" {
+    #include <unistd.h>
+}
+#endif
+
+#ifdef _WIN64
+extern "C" {
+    #include <stdlib.h>
+}
+#endif
+
+using std::string_literals::operator""s;
+
+std::string get_local_file_path() {
+#ifdef __unix__
+    constexpr size_t buf_size = 64;
+    
+    auto username_buf = std::make_unique<char[]>(64);
+    
+    for(auto i = 0; i < buf_size; ++i) {
+        username_buf[i] = '\0';
+    }
+
+    getlogin_r(username_buf.get(),buf_size);
+    return "/home/"s + std::string(username_buf.get()) + "/.local/share"s;
+#endif
+
+#ifdef __WIN64
+    constexpr size_t buf_size = 64;
+    
+    auto username_buf = std::make_unique<char[]>(64);
+    
+    for(auto i = 0; i < buf_size; ++i) {
+        username_buf[i] = '\0';
+    }
+    _dupenv_s(username_buf.get(), buf_size, "APPDATA");
+
+    return std::string(username_buf.get());
+#endif
+    throw std::runtime_error("Compilation environment should have defined either __unix__ or _WIN64 macros. Could not correctly initialize library component.");
+}
+
+std::string get_native_separator() {
+    #ifdef _WIN64
+    return "\\"s;
+    #endif
+    return "/"s;
+}
+
+library::library() 
+    : application_files_path(get_local_file_path()),
+    native_separator(get_native_separator()),
+    project_directory(application_files_path+native_separator+"dynamick_cast"s + native_separator)
+{
+
+}
+
+
 iterator library::begin() noexcept {
     return channels.begin();
 }
@@ -130,4 +190,12 @@ void library::fill_from_json(std::ifstream &save_file) {
     }
 
     std::swap(channels, new_channels);
+}
+
+std::string library::native_sep() const {
+    return native_separator;
+}
+
+std::string library::app_file_path() const {
+    return project_directory;
 }

@@ -9,8 +9,15 @@ private:
     std::map<std::string, podcast> channels;
     static constexpr int version = 2;
 
+
+    const std::string application_files_path;
+    const std::string native_separator;
+    const std::string project_directory;
+
 public:
     mutable std::mutex access_lock;
+
+    library();
 
 
     using iterator = std::map<std::string,podcast>::iterator;
@@ -39,4 +46,6 @@ public:
     //void fill_from_xml(std::ifstream &save_file);
     void fill_from_json(std::ifstream &save_file);
 
+    std::string native_sep() const;
+    std::string app_file_path() const;
 };

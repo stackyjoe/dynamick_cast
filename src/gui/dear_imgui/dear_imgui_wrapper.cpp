@@ -29,9 +29,6 @@ dear_imgui_wrapper::dear_imgui_wrapper(int &argc, char **argv, thread_safe_inter
     audio_handle(std::move(audio_handle)),
     library_handle(thread_safe_interface<library>::template make<library>()),
     state(UserDesiredState::stop),
-    home_path("/usr/home/joe"s),
-    native_separator("/"s),
-    project_directory(home_path + "/.local/share/applications/dynamick-cast/"s),
     url_input_buffer(std::make_unique<char[]>(buffer_size)),
     vol(100.0f),
     user_holds_volume_slider(false),
@@ -39,7 +36,11 @@ dear_imgui_wrapper::dear_imgui_wrapper(int &argc, char **argv, thread_safe_inter
     user_holds_track_slider(false),
     menu_size(ImVec2(0,20))
     {
-
+    auto [afp, ns] = library_handle.perform([](auto &l){
+        return std::make_pair(l.app_file_path(), l.native_sep());
+    });
+    project_directory = afp;
+    native_separator = ns;
     // Setup SDL
     // (Some versions of SDL before <2.0.10 appears to have performance/stalling issues on a minority of Windows systems,    // depending on whether SDL_INIT_GAMECONTROLLER is enabled or disabled.. updating to latest version of SDL is recommended!)
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0) {
@@ -450,7 +451,8 @@ void dear_imgui_wrapper::run() {
 
 void dear_imgui_wrapper::load_subscriptions() noexcept {
     debug_print("Loading subscriptions.\n");
-    std::string file_path = project_directory + "subscriptions.json"s;
+
+    std::string file_path =  project_directory + "subscriptions.json"s;
     std::ifstream save_file(file_path, std::ios::in);
 
     if(! save_file.is_open()) {
@@ -474,7 +476,8 @@ void dear_imgui_wrapper::load_subscriptions() noexcept {
 }
 
 void dear_imgui_wrapper::save_subscriptions() {
-    fmt::print("Saving subscriptions.\n");
+    debug_print("Saving subscriptions.\n");
+
     std::string file_path = project_directory + "subscriptions.json"s;
     std::ofstream save_file(file_path, std::ios::out);
 

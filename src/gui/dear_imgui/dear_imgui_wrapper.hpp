@@ -54,13 +54,10 @@ private:
     std::mutex daemon_lock;
     UserDesiredState state;
     std::string open_channel;
-    std::string home_path;
-    std::string native_separator;
-    std::string project_directory;
     getter get;
     std::unique_ptr<char[]> url_input_buffer;
-
-
+    std::string project_directory;
+    std::string native_separator;
     float vol;
     bool user_holds_volume_slider;
     float track_position;

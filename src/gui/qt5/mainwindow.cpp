@@ -220,9 +220,10 @@ void MainWindow::download_or_play(const QModelIndex &index) {
 
     std::string file_name = episode->get_sanitized_file_name();
 
-    if(! QDir::root().mkpath(QString::fromStdString(project_directory + native_separator + open_channel)))
+
+    if(! QDir::root().mkpath(QString::fromStdString(project_directory + open_channel)))
         throw std::filesystem::filesystem_error("Could not create directory "s,
-                                                              project_directory + native_separator + open_channel,
+                                                              project_directory + open_channel,
                                                               std::error_code());
 
     std::string local_path = project_directory + open_channel + native_separator + file_name;
@@ -313,6 +314,7 @@ void MainWindow::fetch_rss(std::string url) {
 }
 
 void MainWindow::load_subscriptions() {
+
     std::string file_path = project_directory + "subscriptions.json"s;
     std::ifstream save_file(file_path, std::ios::in);
 
@@ -362,7 +364,8 @@ void MainWindow::remove_local_files(std::string channel_name) {
 }
 
 void MainWindow::save_subscriptions() {
-    fmt::print("Saving subscriptions.\n");
+    debug_print("Saving subscriptions.\n");
+
     std::string file_path = project_directory + "subscriptions.json"s;
     std::ofstream save_file(file_path, std::ios::out);
 

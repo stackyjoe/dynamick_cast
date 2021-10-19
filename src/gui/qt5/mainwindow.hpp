@@ -74,12 +74,11 @@ private:
     thread_safe_interface<audio_abstraction> audio_handle;
     UserDesiredState state;
     std::string open_channel;
-    std::string home_path;
-    std::string native_separator;
-    std::string project_directory;
     getter get;
     std::thread daemon;
     std::atomic<int> volume;
+    std::string project_directory;
+    std::string native_separator;
 
     static constexpr size_t maximum_allowed_bytes_between_updates = 100000;
 
@@ -106,6 +105,12 @@ private:
         }),
     volume(100)
 {
+    auto [afp, ns] = library_handle.perform([](auto &l){
+        return std::make_pair(l.app_file_path(), l.native_sep());
+    });
+    project_directory = afp;
+    native_separator = ns;
+
     ui->setupUi(this);
     showMaximized();
 
