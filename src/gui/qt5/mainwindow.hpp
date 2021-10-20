@@ -68,7 +68,7 @@ private:
 
 
     std::unique_ptr<Ui::MainWindow> ui;
-    library channels;
+    thread_safe_interface<library> library_handle;
     std::mutex seek_bar_lock;
     std::mutex daemon_lock;
     thread_safe_interface<audio_abstraction> audio_handle;
@@ -89,11 +89,9 @@ private:
     :
     QMainWindow(nullptr),
     ui(std::make_unique<Ui::MainWindow>()),
+    library_handle(thread_safe_interface<library>::template make<library>()),
     audio_handle(std::move(audio_handle)),
     state(UserDesiredState::stop),
-    home_path(QDir::homePath().toStdString()),
-    native_separator(std::string("")+QDir::separator().toLatin1()),
-    project_directory(home_path + std::string("/.local/share/applications/dynamick-cast/")),
     daemon(
         [this](){
             while(1) {

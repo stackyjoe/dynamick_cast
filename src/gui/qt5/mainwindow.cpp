@@ -67,7 +67,7 @@ void MainWindow::closeEvent([[maybe_unused]] QCloseEvent *ev) {
 }
 
 void MainWindow::download(const QModelIndex &index) {
-    auto maybe_podcast = channels.find(open_channel);
+    auto maybe_podcast = library_handle.perform([this](library &channels){return channels.find(this->open_channel);});
     if(maybe_podcast == nullptr) {
         return;
     }
@@ -173,7 +173,7 @@ void MainWindow::download(podcast &cur_pod,
         output_file.write(body.c_str(), body.size());
         output_file.close();
 
-        auto r = this->channels.find(pod_name);
+        auto r = this->library_handle.perform([pod_name](auto & channels){return channels.find(pod_name);});
         if(r == nullptr || pod_name != this->open_channel) {
             return;
         }
@@ -202,7 +202,7 @@ void MainWindow::download(podcast &cur_pod,
 
 void MainWindow::download_or_play(const QModelIndex &index) {
 
-    auto maybe_podcast = channels.find(open_channel);
+    auto maybe_podcast = library_handle.perform([this](auto &channels){return channels.find(this->open_channel);});
     if(maybe_podcast == nullptr)
         return;
 
@@ -281,7 +281,7 @@ void MainWindow::fetch_rss(std::string url) {
             auto podcast = rss.parse(url);
             auto title = podcast.title();
 
-            auto [itr, was_inserted] = channels.insert_or_assign(title, std::move(podcast));
+            auto [itr, was_inserted] = library_handle.perform([title, podcast=std::move(podcast)](auto &channels) mutable -> auto {return channels.insert_or_assign(title, std::move(podcast));});
 
             int cur_count = ui->podcastView->model()->rowCount();
 
@@ -324,7 +324,7 @@ void MainWindow::load_subscriptions() {
     }
 
     try {
-        channels.fill_from_json(save_file);
+        library_handle.perform([&save_file](auto &channels) mutable -> void {channels.fill_from_json(save_file);});
         sync_ui_with_library_state();
     }
     catch(const std::exception &e) {
@@ -338,7 +338,7 @@ void MainWindow::load_subscriptions() {
 }
 
 void MainWindow::remove_local_file(const QModelIndex &index) {
-    auto maybe_podcast = channels.find(open_channel);
+    auto maybe_podcast = library_handle.perform([this](auto &channels){return channels.find(this->open_channel);});
     if(maybe_podcast == nullptr)
         return;
 
@@ -375,6 +375,7 @@ void MainWindow::save_subscriptions() {
     }
 
     try{
+        library_handle.perform([&save_file](library &channels) mutable -> void {
         // Recall channels is a map, QString -> podcast
         if(channels.empty()) {
             save_file.close();
@@ -382,6 +383,7 @@ void MainWindow::save_subscriptions() {
         }
 
         channels.serialize_into(save_file);
+        });
         save_file.close();
     }
     catch(const std::exception &e) {
@@ -401,7 +403,7 @@ void MainWindow::seek() {
 void MainWindow::set_active_channel(const QModelIndex &index) {
     std::string channel_name = index.data(Qt::DisplayRole).toString().toStdString();
 
-    auto maybe_podcast = channels.find(channel_name);
+    auto maybe_podcast = library_handle.perform([&channel_name](auto &channels){return channels.find(channel_name);});
     if(maybe_podcast == nullptr)
         return;
 
@@ -498,7 +500,7 @@ void MainWindow::sync_ui_with_audio_state() {
 }
 
 void MainWindow::sync_ui_with_download_state() {
-    auto maybe_podcast = channels.find(open_channel);
+    auto maybe_podcast = library_handle.perform([this](auto &channels){return channels.find(this->open_channel);});
     if(maybe_podcast == nullptr) {
         return;
     }
@@ -509,20 +511,25 @@ void MainWindow::sync_ui_with_download_state() {
 
 void MainWindow::sync_ui_with_library_state() {
     ui->podcastView->model()->removeRows(0, ui->podcastView->model()->rowCount());
-    ui->podcastView->model()->insertRows(0, static_cast<int>(channels.size()));
+    ui->podcastView->model()->insertRows(0,
+        static_cast<int>(library_handle.perform([](auto &channels){return channels.size();})));
 
-    int cur_row=0;
-    for(auto &[title, channel] : channels) {
-        (void)channel;// Can't use [[maybe_unused]] attribute with structured bindings for older compilers.
-        QModelIndex index = ui->podcastView->model()->index(cur_row,0);
-        ui->podcastView->model()->setData(index, QString::fromStdString(title), Qt::DisplayRole);
-        ++cur_row;
-    }
+    library_handle.perform([this](library &channels){
+        int cur_row=0;
+        auto ui = this->ui.get();
 
-    ui->episodeView->model()->removeRows(0, ui->episodeView->model()->rowCount());
-    if(auto maybe_podcast = channels.find(open_channel); maybe_podcast != nullptr) {
-        populate(ui->episodeView, project_directory, maybe_podcast);
-    }
+        for(auto &[title, channel] : channels) {
+            (void)channel;// Can't use [[maybe_unused]] attribute with structured bindings for older compilers.
+            QModelIndex index = ui->podcastView->model()->index(cur_row,0);
+            ui->podcastView->model()->setData(index, QString::fromStdString(title), Qt::DisplayRole);
+            ++cur_row;
+        }
+
+        ui->episodeView->model()->removeRows(0, ui->episodeView->model()->rowCount());
+        if(auto maybe_podcast = channels.find(open_channel); maybe_podcast != nullptr) {
+            this->populate(ui->episodeView, project_directory, maybe_podcast);
+        }
+    });
 
     ui->episodeView->update();
     ui->podcastView->update();
@@ -546,7 +553,9 @@ void MainWindow::podcastViewContextMenu(QPoint p) {
         auto podcast_name = index.data(Qt::DisplayRole).toString().toStdString();
 
 
-        auto maybe_podcast = channels.find(podcast_name);
+        auto maybe_podcast = library_handle.perform([&podcast_name](library &channels){
+            return channels.find(podcast_name);
+        });
 
         if(maybe_podcast == nullptr)
             return;
@@ -564,7 +573,7 @@ void MainWindow::podcastViewContextMenu(QPoint p) {
 
         menu.addAction(QString("Remove podcast and local files"),
                        [this, podcast_name, row=index.row()](){
-                            this->channels.erase(podcast_name);
+                            this->library_handle.perform([&podcast_name](library &channels){channels.erase(podcast_name);});
                             this->ui->podcastView->model()->removeRow(row);
                             this->remove_local_files(podcast_name);
                         }
