@@ -21,7 +21,7 @@ if(USE_SFML AND USE_SFML_MP3_EXPERIMENTAL)
     target_include_directories(sfml_mp3_implementation PUBLIC ./)
 
     # Necessary audio libraries
-    if(WINDOWS)
+    if(WIN32)
         find_package(mpg123 CONFIG REQUIRED)
         target_link_libraries(sfml_mp3_implementation PUBLIC MPG123::libmpg123 MPG123::libout123 MPG123::libsyn123)
     endif()

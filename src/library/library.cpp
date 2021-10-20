@@ -39,17 +39,17 @@ std::string get_local_file_path() {
     return "/home/"s + std::string(username_buf.get()) + "/.local/share"s;
 #endif
 
-#ifdef __WIN64
-    constexpr size_t buf_size = 64;
+#ifdef _WIN64
     
-    auto username_buf = std::make_unique<char[]>(64);
-    
-    for(auto i = 0; i < buf_size; ++i) {
-        username_buf[i] = '\0';
-    }
-    _dupenv_s(username_buf.get(), buf_size, "APPDATA");
+    char* p = nullptr;
+    size_t buf_size = 64;
 
-    return std::string(username_buf.get());
+    _dupenv_s(&p, &buf_size, "APPDATA");
+
+    // The string seems to have a trailing space
+    std::string contents = { p, p+buf_size-1 };
+    free(p);
+    return contents;
 #endif
     throw std::runtime_error("Compilation environment should have defined either __unix__ or _WIN64 macros. Could not correctly initialize library component.");
 }

@@ -1,24 +1,13 @@
 #include <fmt/core.h>
 
-//#include <QPersistentModelIndex>
-
-
 #include "download_shared_state.hpp"
 
-
-void download_shared_state::adopt_lock(std::unique_lock<std::mutex> &&lock) noexcept {
-    lock_storage.emplace(std::move(lock));
+download_shared_state::notify_on_destruct download_shared_state::should_start_downloading() noexcept {
+    return notify_on_destruct(this);
 }
 
-std::unique_lock<std::mutex> download_shared_state::take_lock() {
-    std::unique_lock<std::mutex> l = std::move(lock_storage.value());
-    lock_storage = {};
-    return l;
-}
-
-
-void download_shared_state::clear_lock() noexcept {
-    lock_storage.reset();
+bool download_shared_state::is_downloading() const noexcept {
+    return currently_downloading.load();
 }
 
 size_t download_shared_state::get_bytes_completed() const noexcept {
@@ -44,13 +33,4 @@ void download_shared_state::set_bytes_total(size_t bytes) noexcept {
 
 void download_shared_state::set_gui_callback(std::function<void ()> &&callback) noexcept {
     gui_callback = callback;
-}
-
-std::optional<std::unique_lock<std::mutex>> download_shared_state::try_lock() const noexcept {
-    std::unique_lock<std::mutex> lock(mtx, std::try_to_lock);
-
-    if(lock.owns_lock())
-        return {std::move(lock)};
-
-    return std::nullopt;
 }

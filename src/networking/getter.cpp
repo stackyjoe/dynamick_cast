@@ -176,7 +176,7 @@ try_to_get:
     // At this point we've found the true url and (possibly) gotten a size hint. We just need to download the file!
     for(size_t i = 0; i < max_redirects; ++i) {
 
-        fmt::print("Attempting with redirect {}\n", i);
+        debug_print("Attempting with redirect {}\n", i);
 
         auto const start_time = get_time_stamp();
         
@@ -198,13 +198,13 @@ try_to_get:
             size_t bytes_read = network_resources->async_read_some(yield_ctx[ec]);
 
             if(ec) {
-                fmt::print("error.\n");
+                notify_and_ignore(ec);
             }
             if(network_resources->parser_is_done()) {
                 auto status = network_resources->get_status();
                 parsed_url old = parsed;
 
-                fmt::print("status: {}\n", static_cast<int>(status));
+                debug_print("status: {}\n", static_cast<int>(status));
 
                 switch(status) {
                     case http::status::ok: {
@@ -257,7 +257,7 @@ try_to_get:
     }
 
 final_attempt:
-    fmt::print("Final attempt: {}://{}:{}{}\n", parsed.protocol, parsed.host, parsed.port, parsed.path);
+    debug_print("Final attempt: {}://{}:{}{}\n", parsed.protocol, parsed.host, parsed.port, parsed.path);
 
 
     auto const start_time = get_time_stamp();
@@ -271,7 +271,7 @@ final_attempt:
 
     network_resources->write_request(std::move(file_req), yield_ctx[ec]);
     if(ec) {
-        fmt::print("write_request failed: {}\n", ec.message());
+        debug_print("write_request failed: {}\n", ec.message());
         return;
     }
 
@@ -293,7 +293,7 @@ final_attempt:
         progress_handler(completed, length_hint);
     }
 
-    fmt::print("coro_download completed\n");
+    debug_print("coro_download completed\n");
 }
 
 std::future<bool> getter::get(std::string url,

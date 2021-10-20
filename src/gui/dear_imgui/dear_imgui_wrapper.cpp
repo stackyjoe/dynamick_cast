@@ -1,5 +1,6 @@
 #include <exception>
 #include <filesystem>
+#include <system_error>
 
 #include <SDL.h>
 #include <fmt/core.h>
@@ -168,6 +169,8 @@ void dear_imgui_wrapper::hotkey_handler() {
         should_continue = false;
     if(ImGui::IsKeyPressed(SDL_SCANCODE_LCTRL) && ImGui::IsKeyPressed(SDL_SCANCODE_Q))
         should_continue = false;
+    if (ImGui::IsKeyPressed(SDL_SCANCODE_LCTRL) && ImGui::IsKeyPressed(SDL_SCANCODE_O))
+        fetch_rss_dialog();
     if(ImGui::IsKeyPressed(SDL_SCANCODE_F5)){
         save_subscriptions();
     }
@@ -372,11 +375,11 @@ void dear_imgui_wrapper::run() {
                             for(auto &ep : pod.peek_items()) {
                                 auto dlr = ep.get_download_rights();
 
-                                if(auto maybe_lock = dlr->try_lock(); maybe_lock.has_value()){
+                                if(!dlr->is_downloading()){
                                     ImGui::Text("   ");
                                 }
                                 else {
-                                    std::string quantity_read = fmt::format("{} B",dlr->get_bytes_completed());
+                                    std::string quantity_read = fmt::format("{} kB",dlr->get_bytes_completed()/1000);
                                     ImGui::Text("%s", quantity_read.c_str());
                                 }
 
@@ -456,7 +459,7 @@ void dear_imgui_wrapper::load_subscriptions() noexcept {
     std::ifstream save_file(file_path, std::ios::in);
 
     if(! save_file.is_open()) {
-        fmt::print("Error opening file: {}\n", file_path);
+        fmt::print("Error opening file: {}\nError code: {}\n", file_path, errno);
         return;
     }
 
@@ -482,7 +485,7 @@ void dear_imgui_wrapper::save_subscriptions() {
     std::ofstream save_file(file_path, std::ios::out);
 
     if(! save_file.is_open()) {
-        fmt::print("Error opening file: {}\n", file_path);
+        fmt::print("Error opening file: {}\nError code: {}\n", file_path, errno);
         return;
     }
 
@@ -510,31 +513,25 @@ void dear_imgui_wrapper::download(episode const & ep, std::string file_path, std
 
     auto download_rights = ep.get_download_rights();
 
-    auto maybe_lock = download_rights->try_lock();
+    auto token = download_rights->should_start_downloading();
 
-    if(! maybe_lock.has_value()) {
+    if(!token.should_start_downloading) {
         return;
     }
-
-    download_rights->adopt_lock(std::move(*maybe_lock));
-    maybe_lock = {};
-
-    download_rights->set_gui_callback([](){});
 
     // Since the completion handler holds ownership of the shared_state, we can just use a raw pointer here.
     auto prog = [shared_state=download_rights]([[maybe_unused]] size_t completed, [[maybe_unused]] size_t total) -> void {
         shared_state->set_bytes_completed(completed);
     };
 
-    auto cmpl = [file_path, download_rights=download_rights] (
+    auto cmpl = [file_path, download_rights=download_rights, token=token] (
             boost::beast::error_code const &ec,
             size_t bytes_read,
             beastly_connection &resources) mutable -> void {
 
+        // RAII wrapper to clear the atomic<bool> download_rights->currently_downloading on destruction
         debug_print("Beginning completion handler\n");
         std::fflush(stdout);
-
-        auto lock = download_rights->take_lock();
 
         if(ec || bytes_read == 0) {
             notify_and_ignore(ec);
@@ -551,6 +548,7 @@ void dear_imgui_wrapper::download(episode const & ep, std::string file_path, std
 
         output_file.write(body.c_str(), body.size());
         output_file.close();
+
     };
 
     auto f = get.get(url, std::move(prog), std::move(cmpl));
@@ -606,7 +604,15 @@ void dear_imgui_wrapper::download_or_play(episode const & ep) {
     std::string url = ep.url();
     std::string file_name = ep.get_sanitized_file_name();
 
-    std::string file_path = project_directory + open_channel + native_separator + file_name;
+    std::error_code ec;
+    std::string folder_for_this_podcast = project_directory + open_channel + native_separator;
+    if (!std::filesystem::create_directory(folder_for_this_podcast, ec) && ec) {
+        debug_print("Failed to create directory.\n");
+        notify_and_ignore(ec);
+        return;
+    }
+
+    std::string file_path = folder_for_this_podcast + file_name;
 
     if( audio_handle.perform(
         [file_path](audio_abstraction &handle) -> bool {

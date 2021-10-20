@@ -19,7 +19,7 @@ if(SFML_FOUND)
 endif()
 
 # Necessary audio libraries
-if(WINDOWS)
+if(WIN32)
     find_package(flac CONFIG REQUIRED)
     target_link_libraries(sfml_audio_implementation PUBLIC FLAC::FLAC FLAC::FLAC++)
 
