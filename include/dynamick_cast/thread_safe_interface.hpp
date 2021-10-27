@@ -78,9 +78,10 @@ public:
         static_assert (std::is_invocable<decltype(o), decltype(get_ref())>::value,
                        "thread_safe_interface::try_perform should be called on lambda invocable with a Facade & argument.");
 
-        if(std::unique_lock access(get_ref().access_lock, std::try_to_lock); not access.owns_lock())
-            return std::nullopt;
-        return o(get_ref());
+        if (std::unique_lock access(get_ref().access_lock, std::try_to_lock); access.owns_lock()) {
+            return o(get_ref());
+        }
+        return std::nullopt;
     }
 
     template<typename operation>
